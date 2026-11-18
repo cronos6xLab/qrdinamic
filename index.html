@@ -301,6 +301,7 @@
   .field-help{font-size:var(--text-caption);color:var(--color-mid-gray);margin-top:6px;line-height:1.43}
   .field-error{font-size:var(--text-caption);color:var(--color-ember);margin-top:6px;font-weight:500}
 
+  /* select con flecha custom */
   select.field-input{
     appearance:none;-webkit-appearance:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -310,7 +311,7 @@
   textarea.field-input{resize:vertical;min-height:64px;font-family:inherit;line-height:1.4}
 
   /* ============================================================
-     TEMPLATE SELECTOR
+     TEMPLATE SELECTOR (nuevo)
      ============================================================ */
   .template-grid{
     display:grid;
@@ -734,7 +735,7 @@
               <div id="cfgProxyStatus" style="margin-bottom:var(--spacing-12);padding:8px 12px;border-radius:var(--radius-nested);font-size:13px;display:none"></div>
               <div class="field-label" style="margin-bottom:6px">URL del Worker o dominio propio</div>
               <div style="display:flex;gap:var(--spacing-8);flex-wrap:wrap">
-                <input class="field-input" id="cfgQrBaseUrlInput" placeholder="https://winter-feather-ca1e.cronos6xlab.workers.dev/" style="flex:1;min-width:0;font-size:13px">
+                <input class="field-input" id="cfgQrBaseUrlInput" placeholder="https://qr.tu-subdominio.workers.dev" style="flex:1;min-width:0;font-size:13px">
                 <button type="button" class="btn btn-primary btn-sm" id="saveQrBaseUrl">Guardar</button>
               </div>
               <div class="field-help" style="margin-top:var(--spacing-12)">
@@ -880,26 +881,31 @@
       </button>
     </div>
     <div class="modal-body">
+      <!-- Selector de plantilla -->
       <div class="field">
         <label class="field-label">Tipo de QR</label>
         <div class="template-grid" id="templateGrid"></div>
         <div class="field-help">Elegí una plantilla y solo completá los datos que pide.</div>
       </div>
 
+      <!-- Nombre -->
       <div class="field">
         <label class="field-label" for="fName">Nombre</label>
         <input class="field-input" id="fName" placeholder="Ej. Cartel reseña — Kansas" maxlength="80">
         <div class="field-help">Nombre interno para identificar este QR en el panel.</div>
       </div>
 
+      <!-- Campos dinámicos según plantilla -->
       <div id="templateFields"></div>
 
+      <!-- URL generada -->
       <div class="field">
         <label class="field-label">URL resultante</label>
         <div id="generatedUrlPreview" class="generated-url empty">Completá los campos para ver la URL</div>
         <div class="field-help">Esta es la URL a la que se redirige al escanear. Podés cambiarla después editando el QR.</div>
       </div>
 
+      <!-- Vista previa del QR (solo en edición) -->
       <div class="field" id="previewField" style="display:none">
         <label class="field-label">Vista previa del QR</label>
         <div style="display:flex;gap:var(--spacing-16);align-items:center">
@@ -911,6 +917,7 @@
         </div>
       </div>
 
+      <!-- Error -->
       <div class="field-error" id="fErr" style="display:none"></div>
     </div>
     <div class="modal-foot">
@@ -947,7 +954,7 @@
 <div class="toast-wrap" id="toastWrap"></div>
 
 <!-- ============================================================
-     PANEL DE DIAGNÓSTICO
+     PANEL DE DIAGNÓSTICO — siempre visible hasta que JS carga OK
      ============================================================ -->
 <div id="__diag" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbeb;border-bottom:2px solid #fde68a;color:#92400e;padding:8px 16px;font-family:ui-monospace,Monaco,Consolas,monospace;font-size:12px;line-height:1.5;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1)">
   <span style="font-weight:600">DIAG:</span>
@@ -957,7 +964,7 @@
 
 <script>
 /* ============================================================
-   DIAGNÓSTICO GLOBAL
+   DIAGNÓSTICO GLOBAL — captura cualquier error y lo muestra
    ============================================================ */
 window.__diagLog = [];
 function __diagSet(msg, type){
@@ -985,6 +992,7 @@ function __diagAppend(msg){
   const el = document.getElementById('__diagMsg');
   if(el) el.textContent = msg;
 }
+// Capturar TODOS los errores no manejados
 window.addEventListener('error', function(e){
   const msg = 'ERROR JS: ' + (e.message || 'desconocido') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '');
   __diagSet(msg, 'error');
@@ -996,6 +1004,7 @@ window.addEventListener('unhandledrejection', function(e){
   __diagSet(msg, 'error');
   console.error('[UNHANDLED]', e);
 });
+// Cerrar panel
 document.addEventListener('DOMContentLoaded', function(){
   const closeBtn = document.getElementById('__diagClose');
   if(closeBtn) closeBtn.addEventListener('click', function(){
@@ -1007,66 +1016,33 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script>
 /* ============================================================
-   CONEXIÓN CON GOOGLE APPS SCRIPT
-   ============================================================ */
-const GAS_DEPLOYMENT_ID = 'AKfycbza4sxlkUT2RH9gE2lKqLPvw44aaOvAe1tl2VaMiTMdpyHodJMHIAERhz869vQorJvLAg';
-const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbza4sxlkUT2RH9gE2lKqLPvw44aaOvAe1tl2VaMiTMdpyHodJMHIAERhz869vQorJvLAg/exec';
-
-/* ============================================================
    STATE
    ============================================================ */
 const state = {
   qrCodes: [],
   stats: {},
-  webAppUrl: GAS_EXEC_URL,
+  webAppUrl: '',
   search: '',
   filter: 'all',
   sort: 'created',
   editingId: null,
   detailId: null,
   loaded: false,
+  // Template state
   templateId: 'custom',
   templateValues: {},
   templateCache: {}
 };
 
 /* ============================================================
-   API WRAPPER (Soporta Vercel/GitHub vía fetch y Apps Script nativo)
+   API WRAPPER
    ============================================================ */
 function api(fn, ...args){
-  if (typeof google !== 'undefined' && google.script && google.script.run) {
-    return new Promise((resolve, reject) => {
-      google.script.run
-        .withSuccessHandler(resolve)
-        .withFailureHandler(reject)
-        [fn](...args);
-    });
-  }
-
-  return fetch(GAS_EXEC_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify({
-      deploymentId: GAS_DEPLOYMENT_ID,
-      fn: fn,
-      args: args
-    })
-  })
-  .then(async (res) => {
-    const text = await res.text();
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      throw new Error('Respuesta no JSON del Web App (verificá que doPost esté publicado para "Cualquier persona"): ' + text.slice(0, 140));
-    }
-    if (!json || json.ok === false) {
-      throw new Error((json && json.error) ? json.error : 'Error ejecutando ' + fn);
-    }
-    return json.result;
+  return new Promise((resolve, reject) => {
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(reject)
+      [fn](...args);
   });
 }
 
@@ -1280,6 +1256,7 @@ const QR_TEMPLATES = [
       { key: 'address', label: 'Dirección (opcional)', type: 'text' }
     ],
     build: f => {
+      // Escapar caracteres especiales de vCard 3.0: \ , ; y saltos de línea
       const esc = v => String(v == null ? '' : v)
         .replace(/\\/g, '\\\\')
         .replace(/,/g, '\\,')
@@ -1370,6 +1347,7 @@ function updateGeneratedUrlPreview(){
 
 function selectTemplate(id){
   if (state.templateId === id) return;
+  // Guardar valores actuales y cargar los del nuevo template (cache por tipo)
   state.templateCache[state.templateId] = Object.assign({}, state.templateValues);
   state.templateId = id;
   state.templateValues = Object.assign({}, state.templateCache[id] || {});
@@ -1377,6 +1355,7 @@ function selectTemplate(id){
   renderTemplateFields();
 }
 
+/* Detección y parseo de plantilla a partir de una URL existente (para editar) */
 function detectAndParseTemplate(url){
   url = String(url || '');
   if (!url) return { id: 'custom', values: {} };
@@ -1420,11 +1399,13 @@ function detectAndParseTemplate(url){
     }
   }
   if (/^data:text\/vcard/i.test(url)) {
+    // Acepta data:text/vcard, data:text/vcard;charset=utf-8, data:text/vcard;base64, etc.
     const mm = url.match(/^data:text\/vcard[^,]*,(.+)$/is);
     if (mm) {
       try {
         let vcard = decodeURIComponent(mm[1]);
         const values = {};
+        // Desescapar vCard 3.0: \n -> newline, \, -> ,, \; -> ;, \\ -> \
         const unesc = v => v ? v.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\') : v;
         const n = vcard.match(/^N:([^;]*);([^;]*)/m);
         if (n) { values.lastName = unesc(n[1]); values.firstName = unesc(n[2]); }
@@ -1455,14 +1436,16 @@ async function loadDashboard(){
     __diagAppend('getDashboardData OK — ' + (data.qrCodes ? data.qrCodes.length : 0) + ' QRs');
     state.qrCodes = data.qrCodes || [];
     state.stats = data.stats || {};
-    state.webAppUrl = data.webAppUrl || GAS_EXEC_URL;
+    state.webAppUrl = data.webAppUrl || '';
     state.loaded = true;
     renderStats();
     renderGrid();
     el('navTotal').textContent = state.stats.total || 0;
+    // Si la vista de Archivo está activa, re-renderizar con datos ya cargados
     const activeView = document.querySelector('.view.active');
     if(activeView && activeView.dataset.view === 'archive') renderArchive();
     __diagSet('Dashboard cargado OK — ' + state.qrCodes.length + ' QRs', 'ok');
+    // Auto-ocultar el panel de diagnóstico tras 3 segundos si todo salió bien
     setTimeout(() => {
       const bar = document.getElementById('__diag');
       if(bar && bar.style.color === 'rgb(22, 101, 52)'){
@@ -1480,9 +1463,9 @@ async function loadDashboard(){
         '<h3>No se pudo cargar el panel</h3>' +
         '<p style="color:var(--color-ember);font-family:ui-monospace,monospace;font-size:12px">' + escapeHtml(msg) + '</p>' +
         '<p style="margin-top:12px">Revisá que:<br>' +
-        '• <code>doPost(e)</code> esté agregado en <code>Codigo.gs</code>.<br>' +
-        '• Hayas actualizado la implementación del Web App (<strong>Nueva versión</strong>).<br>' +
-        '• El acceso esté configurado como <strong>Cualquier persona</strong>.</p>' +
+        '• El backend (<code>Codigo.gs</code>) esté pegado en el proyecto.<br>' +
+        '• Hayas creado una <strong>nueva implementación</strong> del Web App.<br>' +
+        '• La función <code>getDashboardData</code> exista en el backend.</p>' +
         '<button type="button" class="btn btn-primary" onclick="loadDashboard()">Reintentar</button>' +
       '</div>';
     toast('No se pudo cargar el panel: ' + msg, 'error');
@@ -1638,6 +1621,7 @@ function updatePreview(){
     field.style.display = 'none';
     return;
   }
+  // Usar la redirectUrl del QR en edición (respeta qrBaseUrl/Worker si está configurado)
   const q = state.qrCodes.find(x => x.id === state.editingId);
   const redirectUrl = q && q.redirectUrl
     ? q.redirectUrl
@@ -1660,6 +1644,7 @@ async function saveForm(){
 
   const tpl = getTemplate(state.templateId);
 
+  // Validar campos requeridos
   for (const f of tpl.fields) {
     const val = String(state.templateValues[f.key] || '').trim();
     if (f.required && !val) {
@@ -1667,6 +1652,7 @@ async function saveForm(){
       err.style.display = 'block';
       return;
     }
+    // Validación específica para teléfonos: al menos 3 dígitos si se informó
     if ((f.type === 'tel') && val) {
       const digits = val.replace(/\D/g, '');
       if (digits.length < 3) {
@@ -1677,6 +1663,7 @@ async function saveForm(){
     }
   }
 
+  // Construir URL
   let url;
   try {
     url = tpl.build(state.templateValues);
@@ -1712,6 +1699,7 @@ async function saveForm(){
       res = await api('createQR', name, url);
       toast('QR creado');
     }
+    // Avisar si la sincronización con el Worker falló (no bloquea la operación)
     if(res && res.sync && res.sync.ok === false){
       setTimeout(() => toast('Sync Worker falló: ' + (res.sync.error || 'error'), 'error'), 400);
     }
@@ -1805,6 +1793,7 @@ async function openDetail(id){
 }
 
 function renderDetail(d){
+  // Prioriza la redirectUrl que devuelve el backend (ya considera qrBaseUrl/Worker)
   const redirectUrl = d.redirectUrl || (state.webAppUrl ? state.webAppUrl + '?id=' + d.id : '');
   const series = Array.isArray(d.series14d) ? d.series14d : [];
   const scansArr = Array.isArray(d.scans) ? d.scans : [];
@@ -1918,6 +1907,7 @@ async function exportCurrentCSV(){
 async function downloadQR(url, name){
   const safeName = String(name || 'qr').replace(/[^a-z0-9]/gi, '-').toLowerCase();
   const imgUrl = qrImageUrl(url, 600);
+  // El atributo download se ignora para URLs cross-origin: hay que fetch + blob
   try{
     const resp = await fetch(imgUrl);
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
@@ -1932,6 +1922,7 @@ async function downloadQR(url, name){
     setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
     toast('QR descargado');
   }catch(e){
+    // Fallback: abrir en pestaña nueva (el usuario lo guarda a mano)
     const a = document.createElement('a');
     a.href = imgUrl;
     a.target = '_blank';
@@ -1999,6 +1990,7 @@ el('detailClear').addEventListener('click', clearScans);
 el('detailDelete').addEventListener('click', deleteCurrentQR);
 el('detailExport').addEventListener('click', exportCurrentCSV);
 
+// Delegación para botones data-detail-action dentro del modal de detalle (evita onclick inline / XSS)
 el('detailBody').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-detail-action]');
   if(!btn) return;
@@ -2073,6 +2065,7 @@ function switchView(name){
   });
   const bc = document.querySelector('.breadcrumb .current');
   if(bc) bc.textContent = VIEW_LABELS[name] || name;
+  // Scroll al tope sin animación al cambiar de vista
   try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
   catch (e) { window.scrollTo(0, 0); }
   if(name === 'stats')    loadStatsView();
@@ -2182,6 +2175,7 @@ el('statsRefresh').addEventListener('click', loadStatsView);
    ============================================================ */
 function renderArchive(){
   const grid = el('archiveGrid');
+  // Si el dashboard todavía no cargó, mostrar loader en vez de "sin QR pausados"
   if(!state.loaded){
     grid.innerHTML = '<div class="loader" style="grid-column:1/-1"><div class="spinner"></div></div>';
     return;
@@ -2238,9 +2232,8 @@ async function loadSettings(){
       proxyStatus.style.display = 'none';
     }
 
-    const webAppUrl = info.webAppUrl || GAS_EXEC_URL;
-    const hasUrl = !!webAppUrl && webAppUrl.indexOf('http') === 0;
-    el('cfgWebAppUrl').textContent = webAppUrl;
+    const hasUrl = !!info.webAppUrl && info.webAppUrl.indexOf('http') === 0;
+    el('cfgWebAppUrl').textContent = info.webAppUrl || 'Web App no detectado. Implementá → Nueva implementación → Aplicación web.';
     el('cfgWebAppUrl').style.color = hasUrl ? 'var(--color-ink)' : 'var(--color-ember)';
 
     el('cfgWorkerUrl').value = info.workerUrl || '';
@@ -2273,7 +2266,7 @@ async function loadSettings(){
 }
 
 el('copyWebAppUrl').addEventListener('click', async () => {
-  const url = state.systemInfo?.webAppUrl || GAS_EXEC_URL;
+  const url = state.systemInfo?.webAppUrl;
   if(!url){ toast('Web App no publicado', 'error'); return; }
   try{
     await navigator.clipboard.writeText(url);
@@ -2284,13 +2277,13 @@ el('copyWebAppUrl').addEventListener('click', async () => {
 });
 
 el('openWebApp').addEventListener('click', () => {
-  const url = state.systemInfo?.webAppUrl || GAS_EXEC_URL;
+  const url = state.systemInfo?.webAppUrl;
   if(url) window.open(url, '_blank');
   else toast('Web App no publicado', 'error');
 });
 
 el('testLookup').addEventListener('click', () => {
-  const url = state.systemInfo?.webAppUrl || GAS_EXEC_URL;
+  const url = state.systemInfo?.webAppUrl;
   if(!url){ toast('Web App no publicado', 'error'); return; }
   const firstQr = state.qrCodes[0];
   if(!firstQr){ toast('Creá un QR primero', 'error'); return; }
@@ -2328,6 +2321,7 @@ el('saveQrBaseUrl').addEventListener('click', async () => {
 el('saveWorkerConfig').addEventListener('click', async () => {
   const url = el('cfgWorkerUrl').value.trim();
   const tokenInput = el('cfgWorkerToken').value;
+  // Si el campo token quedó vacío (placeholder "guardado"), NO lo sobreescribimos: pasamos null
   const token = tokenInput.trim();
   if(!url && !token){
     toast('Completá la URL del Worker y/o el token', 'error');
@@ -2338,6 +2332,7 @@ el('saveWorkerConfig').addEventListener('click', async () => {
     return;
   }
   try{
+    // token === '' -> null => backend preserva el token existente
     await api('setWorkerConfig', url, token ? token : null);
     toast('Config del Worker guardada');
     el('cfgWorkerToken').value = '';
@@ -2413,18 +2408,30 @@ el('refreshAll').addEventListener('click', async () => {
 });
 
 /* ============================================================
-   INIT — compatible con Vercel/GitHub y Google Apps Script
+   INIT — con diagnóstico visible y manejo de errores robusto
    ============================================================ */
 function init(){
-  const isGasNative = (typeof google !== 'undefined' && google.script && google.script.run);
-  if (isGasNative) {
-    __diagAppend('Entorno Apps Script nativo — cargando dashboard…');
-  } else {
-    __diagAppend('Conectando a Apps Script (' + GAS_DEPLOYMENT_ID.slice(0, 12) + '…)');
+  __diagAppend('JS iniciado — verificando entorno…');
+  // 1) Verificar que google.script.run exista (entorno de Apps Script)
+  if (typeof google === 'undefined' || !google.script || !google.script.run) {
+    __diagSet('ERROR: google.script.run no disponible. ¿Abriste fuera de Apps Script?', 'error');
+    console.error('[INIT] google.script.run no disponible');
+    toast('Error: este panel solo funciona dentro de Apps Script.', 'error');
+    el('qrGrid').innerHTML =
+      '<div class="empty" style="grid-column:1/-1">' +
+        '<h3>Error de entorno</h3>' +
+        '<p>Este panel debe servirse desde un Web App de Apps Script.<br>' +
+        'Abrilo desde <strong>Implementar → Administrar implementaciones → URL del Web App</strong>.</p>' +
+      '</div>';
+    return;
   }
+  __diagAppend('google.script.run OK — cargando dashboard…');
+  console.log('[INIT] google.script.run OK — cargando dashboard…');
+  // 2) Cargar dashboard
   loadDashboard();
 }
 
+// Ejecutar init cuando el DOM esté listo (defensivo)
 try {
   __diagAppend('Script parseado OK — esperando DOM…');
   if (document.readyState === 'loading') {
