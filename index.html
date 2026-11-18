@@ -1,0 +1,2443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Panel · QR Dinámico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     DESIGN TOKENS — clinical blueprint on frosted paper
+     ============================================================ */
+  :root{
+    --color-canvas:#f5f5f5;
+    --color-paper:#ffffff;
+    --color-surface-alt:#fafafa;
+    --color-ink:#0a0a0a;
+    --color-ink-soft:#171717;
+    --color-mid-gray:#737373;
+    --color-hairline:#e5e5e5;
+    --color-ember:#e7000b;
+
+    --font-geist:'Inter','Geist',ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+
+    --text-caption:12px;   --leading-caption:1.33;   --tracking-caption:0.6px;
+    --text-body:14px;      --leading-body:1.43;
+    --text-body-lg:16px;   --leading-body-lg:1.5;
+    --text-subheading:18px;--leading-subheading:1.56;
+    --text-heading-sm:24px;--leading-heading-sm:1.33;--tracking-heading-sm:-0.6px;
+    --text-heading:30px;   --leading-heading:1.2;    --tracking-heading:-0.75px;
+    --text-heading-lg:36px;--leading-heading-lg:1.11;--tracking-heading-lg:-0.9px;
+    --text-display:48px;   --leading-display:1.1;    --tracking-display:-2.4px;
+
+    --spacing-4:4px; --spacing-8:8px; --spacing-12:12px;
+    --spacing-16:16px; --spacing-20:20px; --spacing-24:24px; --spacing-48:48px;
+
+    --radius-cards:24px;
+    --radius-small:6px;
+    --radius-badges:18px;
+    --radius-inputs:18px;
+    --radius-nested:10px;
+    --radius-buttons:18px;
+
+    --shadow-card:0 0 0 1px rgba(23,23,23,.05), 0 1px 3px rgba(0,0,0,.1), 0 1px 2px -1px rgba(0,0,0,.1);
+    --shadow-overlay:0 0 0 1px rgba(23,23,23,.05), 0 8px 28px rgba(0,0,0,.12);
+  }
+
+  html{ -webkit-text-size-adjust:100%; }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:var(--font-geist);
+    background:var(--color-canvas);
+    color:var(--color-ink);
+    font-size:var(--text-body);
+    line-height:var(--leading-body);
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+  button{font-family:inherit;cursor:pointer;border:0;background:transparent;color:inherit}
+  input,textarea,select{
+    font-family:inherit;
+    font-size:16px;
+    color:var(--color-ink);
+  }
+  @media (hover:hover) and (pointer:fine){
+    input,textarea,select,.input,.field-input{ font-size:var(--text-body); }
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:#171717;color:#fafafa}
+
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  .app{display:flex;min-height:100vh}
+
+  .sidebar{
+    width:240px;flex-shrink:0;background:var(--color-surface-alt);
+    border-right:1px solid var(--color-hairline);
+    display:flex;flex-direction:column;padding:var(--spacing-20);
+    padding-top:calc(var(--spacing-20) + env(safe-area-inset-top, 0px));
+    position:sticky;top:0;
+    height:100vh; height:100dvh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:var(--spacing-24)}
+  .brand-mark{
+    width:28px;height:28px;border-radius:var(--radius-small);
+    background:var(--color-ink);color:#fafafa;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:600;font-size:13px;letter-spacing:-0.3px;
+  }
+  .brand-name{font-size:14px;font-weight:600;letter-spacing:-0.2px}
+  .brand-sub{font-size:var(--text-caption);color:var(--color-mid-gray);letter-spacing:var(--tracking-caption);text-transform:uppercase}
+
+  .nav-section-label{
+    font-size:var(--text-caption);color:var(--color-mid-gray);
+    text-transform:uppercase;letter-spacing:var(--tracking-caption);
+    margin:var(--spacing-16) 0 var(--spacing-8);padding:0 var(--spacing-12);
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:10px;
+    padding:8px var(--spacing-12);border-radius:var(--radius-inputs);
+    font-size:var(--text-body);font-weight:500;color:var(--color-ink);
+    width:100%;text-align:left;transition:background .15s ease;
+  }
+  .nav-item:hover{background:var(--color-canvas)}
+  .nav-item.active{background:var(--color-paper);box-shadow:var(--shadow-card)}
+  .nav-item svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .nav-badge{margin-left:auto;background:var(--color-ink-soft);color:#fafafa;border-radius:var(--radius-badges);padding:1px 8px;font-size:11px;font-weight:500}
+
+  .sidebar-footer{margin-top:auto;padding-top:var(--spacing-16);font-size:var(--text-caption);color:var(--color-mid-gray);letter-spacing:var(--tracking-caption);text-transform:uppercase}
+
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+  .topbar{
+    height:calc(56px + env(safe-area-inset-top, 0px));
+    padding-top:env(safe-area-inset-top, 0px);
+    border-bottom:1px solid var(--color-hairline);
+    background:rgba(245,245,245,.85);backdrop-filter:blur(8px);
+    display:flex;align-items:center;padding-left:var(--spacing-24);padding-right:var(--spacing-24);gap:var(--spacing-12);
+    position:sticky;top:0;z-index:10;
+  }
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:var(--text-body);color:var(--color-mid-gray)}
+  .breadcrumb .current{color:var(--color-ink)}
+  .breadcrumb svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .topbar-spacer{flex:1}
+  .search-trigger{
+    display:flex;align-items:center;gap:8px;background:var(--color-canvas);
+    border-radius:var(--radius-inputs);padding:7px 10px;color:var(--color-mid-gray);
+    font-size:var(--text-body);min-width:220px;
+  }
+  .search-trigger svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .kbd{margin-left:auto;background:var(--color-paper);border:1px solid var(--color-hairline);border-radius:var(--radius-small);padding:1px 6px;font-size:11px;color:var(--color-mid-gray)}
+
+  .content{padding:var(--spacing-24) var(--spacing-24) var(--spacing-48);max-width:1280px;width:100%;margin:0 auto}
+
+  /* ============================================================
+     HERO
+     ============================================================ */
+  .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--spacing-20);margin-bottom:var(--spacing-24)}
+  .hero h1{font-size:var(--text-heading-lg);line-height:var(--leading-heading-lg);letter-spacing:var(--tracking-heading-lg);font-weight:600;margin:0 0 6px}
+  .hero p{color:var(--color-mid-gray);margin:0;font-size:var(--text-body-lg);line-height:var(--leading-body-lg)}
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    font-size:var(--text-body);font-weight:500;height:38px;padding:0 var(--spacing-16);
+    border-radius:var(--radius-buttons);transition:all .15s ease;white-space:nowrap;
+  }
+  .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6}
+  .btn-primary{background:var(--color-ink);color:#fafafa}
+  .btn-primary:hover{background:var(--color-ink-soft)}
+  .btn-ghost{background:var(--color-canvas);color:var(--color-ink)}
+  .btn-ghost:hover{background:var(--color-hairline)}
+  .btn-outline{background:transparent;color:var(--color-ink);border:1px solid var(--color-hairline)}
+  .btn-outline:hover{background:var(--color-canvas)}
+  .btn-danger{color:var(--color-ember);background:transparent;border:1px solid var(--color-hairline)}
+  .btn-danger:hover{background:#fef2f3;border-color:#fecdd3}
+  .btn-sm{height:32px;padding:0 12px;font-size:13px}
+  .btn-icon{padding:0;width:38px}
+  .btn-icon.btn-sm{width:32px}
+
+  /* ============================================================
+     STAT BLOCKS
+     ============================================================ */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--spacing-12);margin-bottom:var(--spacing-24)}
+  .stat{
+    background:var(--color-paper);border:1px solid var(--color-hairline);
+    border-radius:var(--radius-cards);padding:var(--spacing-20);
+    box-shadow:var(--shadow-card);
+  }
+  .stat-label{font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0 0 var(--spacing-12)}
+  .stat-value{font-size:var(--text-heading);line-height:var(--leading-heading);letter-spacing:var(--tracking-heading);font-weight:600;margin:0;overflow-wrap:anywhere}
+  .stat-delta{display:flex;align-items:center;gap:6px;margin-top:var(--spacing-12);font-size:var(--text-body);color:var(--color-mid-gray);flex-wrap:wrap}
+  .stat-delta strong{color:var(--color-ink);font-weight:500}
+
+  /* ============================================================
+     FILTERS BAR
+     ============================================================ */
+  .toolbar{display:flex;align-items:center;gap:var(--spacing-12);margin-bottom:var(--spacing-16);flex-wrap:wrap}
+  .input{
+    background:var(--color-canvas);border:1px solid transparent;border-radius:var(--radius-inputs);
+    padding:8px 12px;font-size:16px;color:var(--color-ink);min-width:260px;flex:1;max-width:380px;
+    transition:border-color .15s ease;
+  }
+  @media (hover:hover) and (pointer:fine){ .input{ font-size:var(--text-body); } }
+  .input:focus{outline:0;border-color:var(--color-hairline);background:var(--color-paper)}
+  .input::placeholder{color:var(--color-mid-gray)}
+  .input-wrap{position:relative;display:flex;align-items:center}
+  .input-wrap svg{position:absolute;left:10px;width:14px;height:14px;stroke:var(--color-mid-gray);fill:none;stroke-width:1.6;pointer-events:none}
+  .input-wrap .input{padding-left:32px}
+
+  .chip-group{display:flex;gap:6px;background:var(--color-canvas);padding:4px;border-radius:var(--radius-buttons)}
+  .chip{
+    padding:6px 12px;font-size:13px;font-weight:500;color:var(--color-mid-gray);
+    border-radius:14px;transition:all .15s ease;
+  }
+  .chip:hover{color:var(--color-ink)}
+  .chip.active{background:var(--color-paper);color:var(--color-ink);box-shadow:var(--shadow-card)}
+
+  .toolbar-spacer{flex:1}
+
+  /* ============================================================
+     QR GRID & CARDS
+     ============================================================ */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:var(--spacing-16)}
+  .card{
+    background:var(--color-paper);border:1px solid var(--color-hairline);
+    border-radius:var(--radius-cards);box-shadow:var(--shadow-card);
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .card-head{
+    padding:var(--spacing-20) var(--spacing-20) var(--spacing-12);
+    display:flex;align-items:flex-start;justify-content:space-between;gap:var(--spacing-12);
+  }
+  .card-title{font-size:var(--text-subheading);font-weight:600;line-height:var(--leading-subheading);margin:0;letter-spacing:-0.2px;word-break:break-word}
+  .card-sub{font-size:var(--text-caption);color:var(--color-mid-gray);margin:2px 0 0;letter-spacing:var(--tracking-caption);text-transform:uppercase}
+
+  .card-body{padding:0 var(--spacing-20) var(--spacing-16);display:flex;gap:var(--spacing-16);align-items:center}
+  .qr-thumb{
+    width:96px;height:96px;flex-shrink:0;border-radius:var(--radius-nested);
+    background:var(--color-surface-alt);border:1px solid var(--color-hairline);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .qr-thumb img{width:100%;height:100%;object-fit:contain}
+  .qr-thumb-empty{font-size:var(--text-caption);color:var(--color-mid-gray);text-align:center;padding:8px}
+
+  .card-stats{flex:1;min-width:0}
+  .card-stat-row{display:flex;flex-direction:column;gap:2px;margin-bottom:var(--spacing-12)}
+  .card-stat-row:last-child{margin-bottom:0}
+  .card-stat-label{font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption)}
+  .card-stat-value{font-size:var(--text-body-lg);font-weight:600;line-height:1.2}
+  .card-url{font-size:var(--text-caption);color:var(--color-mid-gray);word-break:break-all;line-height:1.43;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  .card-foot{
+    padding:var(--spacing-12) var(--spacing-20);border-top:1px solid var(--color-hairline);
+    background:var(--color-surface-alt);display:flex;align-items:center;gap:var(--spacing-8);
+  }
+  .card-foot .btn{flex:1}
+
+  /* ============================================================
+     BADGES
+     ============================================================ */
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    border-radius:var(--radius-badges);padding:2px 8px;font-size:var(--text-caption);font-weight:500;
+    line-height:1.6;letter-spacing:0.1px;white-space:nowrap;
+  }
+  .badge-solid{background:var(--color-ink-soft);color:#fafafa}
+  .badge-soft{background:var(--color-canvas);color:var(--color-ink-soft)}
+  .badge-outline{background:transparent;color:var(--color-ink);border:1px solid var(--color-hairline)}
+  .badge-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+  .badge-warning{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+  .badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+
+  /* ============================================================
+     EMPTY STATE
+     ============================================================ */
+  .empty{
+    background:var(--color-paper);border:1px dashed var(--color-hairline);
+    border-radius:var(--radius-cards);padding:var(--spacing-48) var(--spacing-24);
+    text-align:center;
+  }
+  .empty h3{font-size:var(--text-heading-sm);font-weight:600;letter-spacing:var(--tracking-heading-sm);margin:0 0 8px}
+  .empty p{color:var(--color-mid-gray);margin:0 0 var(--spacing-20);font-size:var(--text-body-lg)}
+
+  /* ============================================================
+     MODAL
+     ============================================================ */
+  .overlay{
+    position:fixed;inset:0;background:rgba(10,10,10,.4);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;z-index:100;padding:var(--spacing-24);
+    opacity:0;pointer-events:none;transition:opacity .15s ease;
+  }
+  .overlay.show{opacity:1;pointer-events:auto}
+  .modal{
+    background:var(--color-paper);border:1px solid var(--color-hairline);
+    border-radius:var(--radius-cards);box-shadow:var(--shadow-overlay);
+    width:100%;max-width:560px;display:flex;flex-direction:column;max-height:90vh;
+    transform:translateY(8px);transition:transform .15s ease;
+  }
+  .overlay.show .modal{transform:translateY(0)}
+  .modal-head{padding:var(--spacing-20) var(--spacing-24);border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between}
+  .modal-head h2{font-size:var(--text-heading-sm);font-weight:600;letter-spacing:var(--tracking-heading-sm);margin:0}
+  .modal-body{padding:var(--spacing-24);overflow:auto;flex:1}
+  .modal-foot{padding:var(--spacing-16) var(--spacing-24);border-top:1px solid var(--color-hairline);display:flex;justify-content:flex-end;gap:var(--spacing-8)}
+
+  .field{margin-bottom:var(--spacing-20)}
+  .field:last-child{margin-bottom:0}
+  .field-label{display:block;font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin-bottom:6px;font-weight:500}
+  .field-input{
+    width:100%;background:var(--color-canvas);border:1px solid transparent;border-radius:var(--radius-inputs);
+    padding:10px 12px;font-size:16px;color:var(--color-ink);transition:border-color .15s ease;
+  }
+  @media (hover:hover) and (pointer:fine){ .field-input{ font-size:var(--text-body); } }
+  .field-input:focus{outline:0;border-color:var(--color-hairline);background:var(--color-paper)}
+  .field-input::placeholder{color:var(--color-mid-gray)}
+  .field-help{font-size:var(--text-caption);color:var(--color-mid-gray);margin-top:6px;line-height:1.43}
+  .field-error{font-size:var(--text-caption);color:var(--color-ember);margin-top:6px;font-weight:500}
+
+  select.field-input{
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;
+    padding-right:32px;cursor:pointer;
+  }
+  textarea.field-input{resize:vertical;min-height:64px;font-family:inherit;line-height:1.4}
+
+  /* ============================================================
+     TEMPLATE SELECTOR
+     ============================================================ */
+  .template-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(88px, 1fr));
+    gap:6px;
+  }
+  .template-card{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:4px;padding:10px 6px;
+    border:1px solid var(--color-hairline);border-radius:var(--radius-nested);
+    background:var(--color-paper);text-align:center;
+    font-size:11px;font-weight:500;line-height:1.2;color:var(--color-mid-gray);
+    cursor:pointer;transition:all .15s ease;word-break:break-word;
+  }
+  .template-card:hover{background:var(--color-canvas);color:var(--color-ink)}
+  .template-card.active{
+    border-color:var(--color-ink);background:var(--color-canvas);color:var(--color-ink);
+    box-shadow:0 0 0 1px var(--color-ink);
+  }
+  .template-card .tpl-icon{font-size:20px;line-height:1;display:block}
+
+  /* ============================================================
+     URL GENERADA (preview)
+     ============================================================ */
+  .generated-url{
+    background:var(--color-surface-alt);
+    border:1px solid var(--color-hairline);
+    border-radius:var(--radius-nested);
+    padding:10px 12px;
+    font-family:ui-monospace,'SF Mono',Monaco,Consolas,monospace;
+    font-size:11px;color:var(--color-ink-soft);
+    word-break:break-all;line-height:1.4;
+    max-height:110px;overflow:auto;
+  }
+  .generated-url.empty{
+    color:var(--color-mid-gray);font-family:inherit;font-size:var(--text-body);
+    font-style:italic;
+  }
+
+  /* ============================================================
+     DETAIL VIEW (inside modal)
+     ============================================================ */
+  .detail-grid{display:grid;grid-template-columns:200px 1fr;gap:var(--spacing-24);align-items:start}
+  .detail-qr{background:var(--color-surface-alt);border:1px solid var(--color-hairline);border-radius:var(--radius-nested);padding:var(--spacing-12);text-align:center}
+  .detail-qr img{width:100%;height:auto;border-radius:var(--radius-small)}
+  .detail-qr-meta{margin-top:var(--spacing-12);font-size:var(--text-caption);color:var(--color-mid-gray);word-break:break-all;line-height:1.43}
+  .detail-qr-actions{margin-top:var(--spacing-12);display:flex;flex-direction:column;gap:6px}
+
+  .detail-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--spacing-12);margin-bottom:var(--spacing-20)}
+  .detail-stat{background:var(--color-surface-alt);border-radius:var(--radius-nested);padding:var(--spacing-12)}
+  .detail-stat-label{font-size:11px;color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0 0 4px}
+  .detail-stat-value{font-size:var(--text-body-lg);font-weight:600;line-height:1.2;margin:0}
+
+  .chart{background:var(--color-surface-alt);border:1px solid var(--color-hairline);border-radius:var(--radius-nested);padding:var(--spacing-16);margin-bottom:var(--spacing-16)}
+  .chart-title{font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0 0 var(--spacing-12)}
+  .chart-bars{display:flex;align-items:flex-end;gap:4px;height:80px}
+  .chart-bar{flex:1;background:var(--color-ink-soft);border-radius:var(--radius-small);min-height:2px;position:relative;transition:height .3s ease}
+  .chart-bar:hover{background:var(--color-ink)}
+  .chart-bar:hover::after{
+    content:attr(data-count);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+    background:var(--color-ink);color:#fafafa;font-size:11px;padding:2px 6px;border-radius:var(--radius-small);
+    white-space:nowrap;margin-bottom:4px;
+  }
+  .chart-x{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--color-mid-gray)}
+
+  .scan-list{max-height:240px;overflow:auto;border:1px solid var(--color-hairline);border-radius:var(--radius-nested)}
+  .scan-row{padding:10px var(--spacing-12);border-bottom:1px solid var(--color-hairline);font-size:var(--text-body);display:flex;justify-content:space-between;gap:var(--spacing-12);align-items:center}
+  .scan-row:last-child{border-bottom:0}
+  .scan-row:hover{background:var(--color-surface-alt)}
+  .scan-time{color:var(--color-ink);font-weight:500;font-size:13px}
+  .scan-ua{color:var(--color-mid-gray);font-size:var(--text-caption);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-align:right}
+
+  /* ============================================================
+     TOAST
+     ============================================================ */
+  .toast-wrap{position:fixed;bottom:var(--spacing-24);right:var(--spacing-24);display:flex;flex-direction:column;gap:8px;z-index:200;max-width:calc(100vw - 32px)}
+  .toast{
+    background:var(--color-ink);color:#fafafa;border-radius:var(--radius-buttons);
+    padding:10px var(--spacing-16);font-size:var(--text-body);font-weight:500;
+    box-shadow:var(--shadow-overlay);display:flex;align-items:center;gap:10px;
+    animation:toastIn .2s ease;word-break:break-word;
+  }
+  .toast.error{background:var(--color-ember)}
+  .toast svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+  @keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ============================================================
+     LOADER
+     ============================================================ */
+  .loader{display:flex;align-items:center;justify-content:center;padding:var(--spacing-48)}
+  .spinner{width:18px;height:18px;border:2px solid var(--color-hairline);border-top-color:var(--color-ink);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width:1024px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+  }
+  @media (max-width:768px){
+    .sidebar{display:none}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .hero{flex-direction:column;align-items:stretch}
+    .hero .btn{width:100%}
+    .detail-grid{grid-template-columns:1fr}
+    .content{padding:var(--spacing-16)}
+    .search-trigger{display:none}
+    [data-view="stats"] > div:last-child,
+    [data-view="settings"] > div:last-child{grid-template-columns:1fr !important}
+  }
+
+  /* ============================================================
+     VIEWS
+     ============================================================ */
+  .view{display:none}
+  .view.active{display:block}
+
+  .rank-row,.recent-row{
+    padding:10px var(--spacing-12);display:flex;align-items:center;gap:var(--spacing-12);
+    border-bottom:1px solid var(--color-hairline);
+  }
+  .rank-row:last-child,.recent-row:last-child{border-bottom:0}
+  .rank-row:hover,.recent-row:hover{background:var(--color-surface-alt)}
+  .rank-pos{
+    width:24px;height:24px;border-radius:var(--radius-small);background:var(--color-canvas);
+    color:var(--color-ink-soft);font-size:11px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .rank-row.top1 .rank-pos{background:var(--color-ink);color:#fafafa}
+  .rank-name{flex:1;min-width:0;font-size:var(--text-body);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rank-count{font-size:var(--text-body);font-weight:600;color:var(--color-ink);flex-shrink:0}
+  .rank-count small{display:block;font-size:11px;color:var(--color-mid-gray);font-weight:400;text-align:right}
+
+  .recent-time{font-size:13px;font-weight:500;color:var(--color-ink);white-space:nowrap}
+  .recent-name{flex:1;font-size:var(--text-caption);color:var(--color-mid-gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .recent-ago{font-size:11px;color:var(--color-mid-gray);white-space:nowrap}
+
+  code{font-family:ui-monospace,'SF Mono',Monaco,Consolas,monospace;font-size:12px;color:var(--color-ink-soft)}
+
+  /* ============================================================
+     MOBILE NAV (bottom bar)
+     ============================================================ */
+  .mobile-nav{
+    display:none;
+    position:fixed;left:0;right:0;bottom:0;
+    background:var(--color-paper);
+    border-top:1px solid var(--color-hairline);
+    padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));
+    z-index:50;justify-content:space-around;align-items:center;
+    box-shadow:0 -2px 12px rgba(0,0,0,.05);
+  }
+  .mobile-nav .mnav-item{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    padding:8px 6px;border-radius:12px;color:var(--color-mid-gray);
+    font-size:10px;font-weight:500;flex:1;min-width:0;
+    transition:color .15s,background .15s;
+  }
+  .mobile-nav .mnav-item svg{
+    width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6;
+  }
+  .mobile-nav .mnav-item.active{color:var(--color-ink);background:var(--color-canvas)}
+  .mobile-nav .mnav-item span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+
+  @media (max-width:768px){
+    .mobile-nav{display:flex}
+    .main{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+    .content{padding-bottom:calc(var(--spacing-48) + 64px + env(safe-area-inset-bottom,0px))}
+    .toast-wrap{bottom:calc(var(--spacing-24) + 64px + env(safe-area-inset-bottom,0px))}
+
+    .btn{height:42px}
+    .btn-sm{height:38px}
+    .btn-icon{width:42px}
+    .btn-icon.btn-sm{width:38px}
+    .chip{padding:8px 14px}
+
+    .toolbar{gap:8px}
+    .input-wrap{flex:1 0 100%;max-width:none}
+    .input{min-width:0;width:100%;max-width:none}
+    .chip-group{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+    .chip-group .chip{flex-shrink:0}
+
+    .overlay{align-items:flex-start;padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px))}
+    .modal{max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+    .modal-body{padding:var(--spacing-16)}
+    .modal-foot{flex-wrap:wrap;gap:8px}
+    .modal-foot .btn{flex:1 1 auto;min-width:0}
+    .modal-foot > div[style*="flex:1"]{display:none}
+
+    .stats{grid-template-columns:repeat(2,1fr)}
+  }
+
+  @media (max-width:480px){
+    .stats{grid-template-columns:1fr}
+    .hero h1{font-size:var(--text-heading-sm);letter-spacing:var(--tracking-heading-sm)}
+    .hero p{font-size:var(--text-body)}
+    .content{padding:var(--spacing-16);padding-bottom:calc(var(--spacing-48) + 64px + env(safe-area-inset-bottom,0px))}
+
+    .card-foot{flex-wrap:wrap}
+    .card-foot .btn{flex:1 1 calc(50% - 4px)}
+    .card-foot .btn-icon{flex:0 0 auto}
+
+    .chart-x{font-size:9px}
+    .template-grid{grid-template-columns:repeat(3, 1fr)}
+  }
+
+  @media (orientation:landscape) and (max-height:500px){
+    .mobile-nav{padding-bottom:6px}
+    .content{padding-bottom:var(--spacing-16)}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">QR</div>
+      <div>
+        <div class="brand-name">Panel QR</div>
+        <div class="brand-sub">Dinámico</div>
+      </div>
+    </div>
+
+    <div class="nav-section-label">General</div>
+    <button type="button" class="nav-item active" data-nav="dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button type="button" class="nav-item" data-nav="stats">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+      Estadísticas
+      <span class="nav-badge" id="navTotal">0</span>
+    </button>
+    <button type="button" class="nav-item" data-nav="archive">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="5"/><path d="M5 8v12h14V8"/><path d="M10 12h4"/></svg>
+      Archivo
+    </button>
+
+    <div class="nav-section-label">Sistema</div>
+    <button type="button" class="nav-item" data-nav="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.5 3h-4l-.4 2.6a7 7 0 0 0-2 1.2L6 5.9l-2 3.4 2 1.5A7 7 0 0 0 5.9 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>
+      Configuración
+    </button>
+
+    <div class="sidebar-footer">v1.4 · Google Sheets</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="breadcrumb">
+        <span>Panel</span>
+        <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="current">Todos los QR</span>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div class="search-trigger">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+        <span>Buscar…</span>
+        <span class="kbd">⌘K</span>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- ============ VISTA: DASHBOARD ============ -->
+      <section class="view active" data-view="dashboard">
+        <section class="hero">
+          <div>
+            <h1>QR Dinámico</h1>
+            <p>Cada QR apunta a una hoja. Cambiá la URL cuando quieras, sin reimprimir.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btnNew">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Crear QR
+          </button>
+        </section>
+
+        <section class="stats" id="statsRow">
+          <div class="stat">
+            <div class="stat-label">Total QR</div>
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-delta"><strong id="statActive">—</strong> activos · <span id="statPaused">—</span> pausados</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Escaneos totales</div>
+            <div class="stat-value" id="statScans">—</div>
+            <div class="stat-delta"><strong id="stat7d">—</strong> en últimos 7 días</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">QR más escaneado</div>
+            <div class="stat-value" id="statTop" style="font-size:var(--text-heading-sm);letter-spacing:var(--tracking-heading-sm)">—</div>
+            <div class="stat-delta"><strong id="statTopCount">—</strong> escaneos</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Último creado</div>
+            <div class="stat-value" id="statLast" style="font-size:var(--text-heading-sm);letter-spacing:var(--tracking-heading-sm)">—</div>
+            <div class="stat-delta">hace <strong id="statLastAgo">—</strong></div>
+          </div>
+        </section>
+
+        <div class="toolbar">
+          <div class="input-wrap">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg>
+            <input class="input" id="search" placeholder="Buscar por nombre o URL…">
+          </div>
+          <div class="chip-group" id="filterGroup">
+            <button type="button" class="chip active" data-filter="all">Todos</button>
+            <button type="button" class="chip" data-filter="active">Activos</button>
+            <button type="button" class="chip" data-filter="paused">Pausados</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <div class="chip-group" id="sortGroup">
+            <button type="button" class="chip active" data-sort="created">Recientes</button>
+            <button type="button" class="chip" data-sort="scans">Más escaneados</button>
+            <button type="button" class="chip" data-sort="name">A-Z</button>
+          </div>
+        </div>
+
+        <div class="grid" id="qrGrid">
+          <div class="loader" style="grid-column:1/-1"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: ESTADÍSTICAS ============ -->
+      <section class="view" data-view="stats">
+        <section class="hero">
+          <div>
+            <h1>Estadísticas</h1>
+            <p>Performance global de todos tus QR combinados.</p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="statsRefresh">
+            <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+            Actualizar
+          </button>
+        </section>
+
+        <section class="stats" id="statsGlobal">
+          <div class="stat">
+            <div class="stat-label">Escaneos totales</div>
+            <div class="stat-value" id="gTotal">—</div>
+            <div class="stat-delta"><strong id="g30d">—</strong> en últimos 30 días</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Últimos 7 días</div>
+            <div class="stat-value" id="g7d">—</div>
+            <div class="stat-delta">vs. <strong id="g7dAvg">—</strong> promedio por QR</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">QR más escaneado</div>
+            <div class="stat-value" id="gTop" style="font-size:var(--text-heading-sm);letter-spacing:var(--tracking-heading-sm)">—</div>
+            <div class="stat-delta"><strong id="gTopCount">—</strong> escaneos totales</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Promedio por QR</div>
+            <div class="stat-value" id="gAvg">—</div>
+            <div class="stat-delta">sobre <strong id="gCount">—</strong> QR activos</div>
+          </div>
+        </section>
+
+        <div class="card" style="margin-bottom:var(--spacing-16)">
+          <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+            <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Escaneos por día · últimos 14 días</p>
+          </div>
+          <div style="padding:0 var(--spacing-20) var(--spacing-20)">
+            <div class="chart-bars" id="globalChart" style="height:140px"></div>
+            <div class="chart-x" style="margin-top:var(--spacing-12)"><span id="chartStart">—</span><span id="chartEnd">hoy</span></div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--spacing-16)">
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Ranking de QR</p>
+            </div>
+            <div id="rankingList" style="padding:0 var(--spacing-8) var(--spacing-8)">
+              <div class="loader"><div class="spinner"></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Últimos escaneos</p>
+            </div>
+            <div id="recentList" style="padding:0 var(--spacing-8) var(--spacing-8)">
+              <div class="loader"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: ARCHIVO ============ -->
+      <section class="view" data-view="archive">
+        <section class="hero">
+          <div>
+            <h1>Archivo</h1>
+            <p>QRs pausados. No redirigen al escanearse, pero conservan todo el historial.</p>
+          </div>
+        </section>
+        <div class="grid" id="archiveGrid">
+          <div class="loader" style="grid-column:1/-1"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <!-- ============ VISTA: CONFIGURACIÓN ============ -->
+      <section class="view" data-view="settings">
+        <section class="hero">
+          <div>
+            <h1>Configuración</h1>
+            <p>Datos del sistema, URLs y acciones de mantenimiento.</p>
+          </div>
+        </section>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--spacing-16)">
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">URL pública del QR</p>
+              <h3 style="font-size:var(--text-subheading);font-weight:600;margin:6px 0 0">Lo que se codifica en el QR</h3>
+            </div>
+            <div style="padding:0 var(--spacing-20) var(--spacing-20)">
+              <div id="cfgQrBaseUrl" style="background:var(--color-surface-alt);border:1px solid var(--color-hairline);border-radius:var(--radius-nested);padding:10px 12px;font-size:var(--text-body);word-break:break-all;margin-bottom:var(--spacing-12);color:var(--color-mid-gray)">Cargando…</div>
+              <div id="cfgProxyStatus" style="margin-bottom:var(--spacing-12);padding:8px 12px;border-radius:var(--radius-nested);font-size:13px;display:none"></div>
+              <div class="field-label" style="margin-bottom:6px">URL del Worker o dominio propio</div>
+              <div style="display:flex;gap:var(--spacing-8);flex-wrap:wrap">
+                <input class="field-input" id="cfgQrBaseUrlInput" placeholder="https://qr.tu-subdominio.workers.dev" style="flex:1;min-width:0;font-size:13px">
+                <button type="button" class="btn btn-primary btn-sm" id="saveQrBaseUrl">Guardar</button>
+              </div>
+              <div class="field-help" style="margin-top:var(--spacing-12)">
+                <strong style="color:var(--color-ink)">Para evitar el aviso de Google:</strong> pegá acá la URL de tu Cloudflare Worker (ej: <code style="background:var(--color-canvas);padding:1px 6px;border-radius:var(--radius-small)">https://qr.tu-subdominio.workers.dev</code>). Los QR van a apuntar al Worker, no a <code style="background:var(--color-canvas);padding:1px 6px;border-radius:var(--radius-small)">script.google.com</code>, y el aviso "App no verificada" desaparece.
+                <br><br>
+                Si dejás esto vacío, los QR apuntan directo al Web App de Apps Script (con aviso de Google).
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">URL del Web App (Apps Script)</p>
+              <h3 style="font-size:var(--text-subheading);font-weight:600;margin:6px 0 0">Backend</h3>
+            </div>
+            <div style="padding:0 var(--spacing-20) var(--spacing-20)">
+              <div id="cfgWebAppUrl" style="background:var(--color-surface-alt);border:1px solid var(--color-hairline);border-radius:var(--radius-nested);padding:10px 12px;font-size:var(--text-body);word-break:break-all;margin-bottom:var(--spacing-12);color:var(--color-mid-gray)">Cargando…</div>
+              <div style="display:flex;gap:var(--spacing-8);flex-wrap:wrap">
+                <button type="button" class="btn btn-outline btn-sm" id="copyWebAppUrl" style="flex:1;min-width:0">
+                  <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  Copiar
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" id="openWebApp" style="flex:1;min-width:0">Abrir</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="testLookup" style="flex:1;min-width:0">Probar JSON</button>
+              </div>
+              <div class="field-help" style="margin-top:var(--spacing-12)">Esta es la URL interna del Apps Script. La usa el Worker para hacer lookup server-to-server (<code style="background:var(--color-canvas);padding:1px 6px;border-radius:var(--radius-small)">?action=lookup&id=xxx</code>). Termina en <code style="background:var(--color-canvas);padding:1px 6px;border-radius:var(--radius-small)">/exec</code>.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Hoja de cálculo</p>
+              <h3 style="font-size:var(--text-subheading);font-weight:600;margin:6px 0 0">Origen de datos</h3>
+            </div>
+            <div style="padding:0 var(--spacing-20) var(--spacing-20)">
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-hairline)">
+                <span style="color:var(--color-mid-gray);font-size:var(--text-body)">Nombre</span>
+                <strong id="cfgSsName" style="font-size:var(--text-body)">—</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-hairline)">
+                <span style="color:var(--color-mid-gray);font-size:var(--text-body)">Hojas</span>
+                <strong id="cfgSheetCount" style="font-size:var(--text-body)">—</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-hairline)">
+                <span style="color:var(--color-mid-gray);font-size:var(--text-body)">QRs totales</span>
+                <strong id="cfgTotalQR" style="font-size:var(--text-body)">—</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:8px 0">
+                <span style="color:var(--color-mid-gray);font-size:var(--text-body)">Escaneos totales</span>
+                <strong id="cfgTotalScans" style="font-size:var(--text-body)">—</strong>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" id="openSpreadsheet" style="width:100%;margin-top:var(--spacing-12)">Abrir hoja de cálculo</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Sync con Worker KV</p>
+              <h3 style="font-size:var(--text-subheading);font-weight:600;margin:6px 0 0">Sincronización con Cloudflare</h3>
+            </div>
+            <div style="padding:0 var(--spacing-20) var(--spacing-20)">
+              <div id="cfgWorkerStatus" style="margin-bottom:var(--spacing-12);padding:10px 12px;border-radius:var(--radius-nested);font-size:13px;background:var(--color-surface-alt);border:1px solid var(--color-hairline)">
+                Cargando…
+              </div>
+              <div class="field" style="margin-bottom:var(--spacing-12)">
+                <label class="field-label">URL del Worker</label>
+                <input class="field-input" id="cfgWorkerUrl" placeholder="https://qr.tu-subdominio.workers.dev" style="font-size:13px">
+              </div>
+              <div class="field" style="margin-bottom:var(--spacing-12)">
+                <label class="field-label">Token de sincronización</label>
+                <input class="field-input" id="cfgWorkerToken" placeholder="tu-token-secreto-aleatorio" style="font-size:13px">
+              </div>
+              <div style="display:flex;gap:var(--spacing-8);flex-wrap:wrap">
+                <button type="button" class="btn btn-primary btn-sm" id="saveWorkerConfig" style="flex:1;min-width:0">Guardar config</button>
+                <button type="button" class="btn btn-outline btn-sm" id="testWorkerBtn" style="flex:1;min-width:0">Probar conexión</button>
+                <button type="button" class="btn btn-ghost btn-sm" id="syncNowBtn" style="flex:1;min-width:0">Sincronizar</button>
+              </div>
+              <div class="field-help" style="margin-top:var(--spacing-12)">
+                <strong style="color:var(--color-ink)">Configuración del Worker:</strong> pegá la URL del Worker y el SYNC_TOKEN que configuraste en Cloudflare. Después click "Sincronizar" para subir todos los QRs al KV.
+                <br>Cuando el KV está activo, los redirects son instantáneos y <strong style="color:var(--color-ink)">nunca pasan por Google</strong> — soluciona el problema en iPhone/Safari.
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Mantenimiento</p>
+              <h3 style="font-size:var(--text-subheading);font-weight:600;margin:6px 0 0">Acciones del sistema</h3>
+            </div>
+            <div style="padding:0 var(--spacing-20) var(--spacing-20)">
+              <button type="button" class="btn btn-ghost btn-sm" id="runSetup" style="width:100%;margin-bottom:var(--spacing-8)">Re-inicializar sistema</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="refreshAll" style="width:100%;margin-bottom:var(--spacing-8)">Recargar dashboard</button>
+              <div class="field-help" style="margin-top:var(--spacing-12)">Re-inicializar crea la hoja <code style="background:var(--color-canvas);padding:1px 6px;border-radius:var(--radius-small)">_Index</code> si no existe. No borra datos existentes.</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="padding:var(--spacing-20) var(--spacing-20) var(--spacing-12)">
+              <p style="font-size:var(--text-caption);color:var(--color-mid-gray);text-transform:uppercase;letter-spacing:var(--tracking-caption);margin:0">Acerca de</p>
+              <h3 style="font-size:var(--text-subheading);font-weight:600;margin:6px 0 0">QR Dinámico v<span id="cfgVersion">1.0</span></h3>
+            </div>
+            <div style="padding:0 var(--spacing-20) var(--spacing-20);font-size:var(--text-body);color:var(--color-mid-gray);line-height:1.5">
+              <p style="margin:0 0 var(--spacing-8)">Cada QR apunta a una hoja del archivo. Cuando alguien lo escanea:</p>
+              <p style="margin:0 0 var(--spacing-8)"><strong style="color:var(--color-ink)">1.</strong> Apps Script recibe <code style="background:var(--color-canvas);padding:1px 6px;border-radius:var(--radius-small)">?id=xxx</code></p>
+              <p style="margin:0 0 var(--spacing-8)"><strong style="color:var(--color-ink)">2.</strong> Loguea el escaneo en la hoja del QR</p>
+              <p style="margin:0 0 var(--spacing-8)"><strong style="color:var(--color-ink)">3.</strong> Redirige a la URL configurada</p>
+              <p style="margin:0">Editás la URL cuando quieras desde el panel — el QR impreso no cambia.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" aria-label="Navegación principal">
+  <button type="button" class="mnav-item active" data-nav="dashboard" aria-label="Dashboard">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    <span>Panel</span>
+  </button>
+  <button type="button" class="mnav-item" data-nav="stats" aria-label="Estadísticas">
+    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+    <span>Stats</span>
+  </button>
+  <button type="button" class="mnav-item" data-nav="archive" aria-label="Archivo">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="5"/><path d="M5 8v12h14V8"/><path d="M10 12h4"/></svg>
+    <span>Archivo</span>
+  </button>
+  <button type="button" class="mnav-item" data-nav="settings" aria-label="Configuración">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.5 3h-4l-.4 2.6a7 7 0 0 0-2 1.2L6 5.9l-2 3.4 2 1.5A7 7 0 0 0 5.9 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9a7 7 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>
+    <span>Ajustes</span>
+  </button>
+</nav>
+
+<!-- MODAL: CREATE / EDIT -->
+<div class="overlay" id="formModal">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:640px">
+    <div class="modal-head">
+      <h2 id="formTitle">Nuevo QR</h2>
+      <button type="button" class="btn btn-icon btn-sm" data-close>
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label class="field-label">Tipo de QR</label>
+        <div class="template-grid" id="templateGrid"></div>
+        <div class="field-help">Elegí una plantilla y solo completá los datos que pide.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="fName">Nombre</label>
+        <input class="field-input" id="fName" placeholder="Ej. Cartel reseña — Kansas" maxlength="80">
+        <div class="field-help">Nombre interno para identificar este QR en el panel.</div>
+      </div>
+
+      <div id="templateFields"></div>
+
+      <div class="field">
+        <label class="field-label">URL resultante</label>
+        <div id="generatedUrlPreview" class="generated-url empty">Completá los campos para ver la URL</div>
+        <div class="field-help">Esta es la URL a la que se redirige al escanear. Podés cambiarla después editando el QR.</div>
+      </div>
+
+      <div class="field" id="previewField" style="display:none">
+        <label class="field-label">Vista previa del QR</label>
+        <div style="display:flex;gap:var(--spacing-16);align-items:center">
+          <img id="previewImg" style="width:120px;height:120px;border:1px solid var(--color-hairline);border-radius:var(--radius-nested);background:var(--color-surface-alt);flex-shrink:0" alt="QR preview">
+          <div style="font-size:var(--text-caption);color:var(--color-mid-gray);line-height:1.43">
+            Este QR apunta al panel de redirect (no a la URL destino).<br>
+            Por eso podés cambiar la URL destino las veces que quieras sin reimprimirlo.
+          </div>
+        </div>
+      </div>
+
+      <div class="field-error" id="fErr" style="display:none"></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost" data-close>Cancelar</button>
+      <button type="button" class="btn btn-primary" id="formSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DETAIL -->
+<div class="overlay" id="detailModal">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width:720px">
+    <div class="modal-head">
+      <h2 id="detailTitle">Detalle</h2>
+      <button type="button" class="btn btn-icon btn-sm" data-close>
+        <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="detailBody">
+      <div class="loader"><div class="spinner"></div></div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-danger btn-sm" id="detailDelete">Eliminar QR</button>
+      <button type="button" class="btn btn-outline btn-sm" id="detailExport">Exportar CSV</button>
+      <button type="button" class="btn btn-outline btn-sm" id="detailClear">Vaciar escaneos</button>
+      <div style="flex:1"></div>
+      <button type="button" class="btn btn-ghost" data-close>Cerrar</button>
+      <button type="button" class="btn btn-primary btn-sm" id="detailEdit">Editar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ============================================================
+     PANEL DE DIAGNÓSTICO
+     ============================================================ -->
+<div id="__diag" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#fffbeb;border-bottom:2px solid #fde68a;color:#92400e;padding:8px 16px;font-family:ui-monospace,Monaco,Consolas,monospace;font-size:12px;line-height:1.5;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.1)">
+  <span style="font-weight:600">DIAG:</span>
+  <span id="__diagMsg">Iniciando JavaScript…</span>
+  <button type="button" id="__diagClose" style="margin-left:auto;background:transparent;border:1px solid #fde68a;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px;color:#92400e">×</button>
+</div>
+
+<script>
+/* ============================================================
+   DIAGNÓSTICO GLOBAL
+   ============================================================ */
+window.__diagLog = [];
+function __diagSet(msg, type){
+  const el = document.getElementById('__diagMsg');
+  if(!el) return;
+  el.textContent = msg;
+  const bar = document.getElementById('__diag');
+  if(type === 'ok'){
+    bar.style.background = '#f0fdf4';
+    bar.style.borderBottom = '2px solid #bbf7d0';
+    bar.style.color = '#166534';
+  } else if(type === 'error'){
+    bar.style.background = '#fef2f3';
+    bar.style.borderBottom = '2px solid #fecdd3';
+    bar.style.color = '#e7000b';
+  } else {
+    bar.style.background = '#fffbeb';
+    bar.style.borderBottom = '2px solid #fde68a';
+    bar.style.color = '#92400e';
+  }
+}
+function __diagAppend(msg){
+  window.__diagLog.push(msg);
+  console.log('[DIAG]', msg);
+  const el = document.getElementById('__diagMsg');
+  if(el) el.textContent = msg;
+}
+window.addEventListener('error', function(e){
+  const msg = 'ERROR JS: ' + (e.message || 'desconocido') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '');
+  __diagSet(msg, 'error');
+  console.error('[FATAL]', e);
+  return false;
+});
+window.addEventListener('unhandledrejection', function(e){
+  const msg = 'PROMESA SIN MANEJAR: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason));
+  __diagSet(msg, 'error');
+  console.error('[UNHANDLED]', e);
+});
+document.addEventListener('DOMContentLoaded', function(){
+  const closeBtn = document.getElementById('__diagClose');
+  if(closeBtn) closeBtn.addEventListener('click', function(){
+    const bar = document.getElementById('__diag');
+    if(bar) bar.style.display = 'none';
+  });
+});
+</script>
+
+<script>
+/* ============================================================
+   CONEXIÓN CON GOOGLE APPS SCRIPT
+   ============================================================ */
+const GAS_DEPLOYMENT_ID = 'AKfycbza4sxlkUT2RH9gE2lKqLPvw44aaOvAe1tl2VaMiTMdpyHodJMHIAERhz869vQorJvLAg';
+const GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbza4sxlkUT2RH9gE2lKqLPvw44aaOvAe1tl2VaMiTMdpyHodJMHIAERhz869vQorJvLAg/exec';
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  qrCodes: [],
+  stats: {},
+  webAppUrl: GAS_EXEC_URL,
+  search: '',
+  filter: 'all',
+  sort: 'created',
+  editingId: null,
+  detailId: null,
+  loaded: false,
+  templateId: 'custom',
+  templateValues: {},
+  templateCache: {}
+};
+
+/* ============================================================
+   API WRAPPER (Soporta Vercel/GitHub vía fetch y Apps Script nativo)
+   ============================================================ */
+function api(fn, ...args){
+  if (typeof google !== 'undefined' && google.script && google.script.run) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        [fn](...args);
+    });
+  }
+
+  return fetch(GAS_EXEC_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({
+      deploymentId: GAS_DEPLOYMENT_ID,
+      fn: fn,
+      args: args
+    })
+  })
+  .then(async (res) => {
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      throw new Error('Respuesta no JSON del Web App (verificá que doPost esté publicado para "Cualquier persona"): ' + text.slice(0, 140));
+    }
+    if (!json || json.ok === false) {
+      throw new Error((json && json.error) ? json.error : 'Error ejecutando ' + fn);
+    }
+    return json.result;
+  });
+}
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function el(id){ return document.getElementById(id); }
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+function truncate(s, n){ s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+function timeAgo(iso){
+  if(!iso) return '—';
+  const d = new Date(iso); const diff = (Date.now() - d.getTime()) / 1000;
+  if(diff < 60) return 'segundos';
+  if(diff < 3600) return Math.floor(diff/60) + ' min';
+  if(diff < 86400) return Math.floor(diff/3600) + ' h';
+  if(diff < 604800) return Math.floor(diff/86400) + ' días';
+  return d.toLocaleDateString('es-AR', { day:'numeric', month:'short' });
+}
+function formatDate(iso){
+  if(!iso) return '—';
+  return new Date(iso).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric' });
+}
+function formatDateTime(iso){
+  if(!iso) return '—';
+  return new Date(iso).toLocaleString('es-AR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function qrImageUrl(data, size){
+  size = size || 240;
+  return "https://api.qrserver.com/v1/create-qr-code/?size=" + size + 'x' + size +
+         '&margin=8&data=' + encodeURIComponent(data);
+}
+function toast(msg, type){
+  const wrap = el('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type === 'error' ? ' error' : '');
+  const icon = type === 'error'
+    ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>'
+    : '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>';
+  t.innerHTML = icon + '<span>' + escapeHtml(msg) + '</span>';
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; t.style.transition = 'all .2s'; }, 2400);
+  setTimeout(() => t.remove(), 2700);
+}
+
+/* ============================================================
+   PLANTILLAS DE QR
+   ============================================================ */
+const QR_TEMPLATES = [
+  {
+    id: 'custom',
+    label: 'URL directa',
+    icon: '🔗',
+    fields: [
+      { key: 'url', label: 'URL de destino', type: 'text', placeholder: "https://...", required: true,
+        help: "Acepta http://, https://, mailto:, tel:, sms: o data:." }
+    ],
+    build: f => (f.url || '').trim()
+  },
+  {
+    id: 'google_review',
+    label: 'Reseña Google',
+    icon: '⭐',
+    fields: [
+      { key: 'placeId', label: 'Place ID', type: 'text', placeholder: 'ChIJ…', required: true,
+        help: 'Obtenelo en developers.google.com/maps/documentation/places/web-service/place-id' }
+    ],
+    build: f => "https://search.google.com/local/writereview?placeid=" + encodeURIComponent((f.placeId||'').trim())
+  },
+  {
+    id: 'google_maps',
+    label: 'Google Maps',
+    icon: '📍',
+    fields: [
+      { key: 'query', label: 'Dirección o lugar', type: 'text', placeholder: 'Av. Corrientes 1234, CABA', required: true }
+    ],
+    build: f => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent((f.query||'').trim())
+  },
+  {
+    id: 'whatsapp',
+    label: 'WhatsApp',
+    icon: '💬',
+    fields: [
+      { key: 'phone', label: 'Número (con código de país, sin +)', type: 'tel', placeholder: '5491123456789', required: true,
+        help: 'Ej: 5491123456789 (54 = Argentina, 9 = móvil, 11 = CABA)' },
+      { key: 'message', label: 'Mensaje pre-cargado (opcional)', type: 'textarea', placeholder: 'Hola! Quiero consultar por...' }
+    ],
+    build: f => {
+      const phone = String(f.phone || '').replace(/[^\d]/g, '');
+      let url = "https://wa.me/" + phone;
+      if (f.message && f.message.trim()) url += "?text=" + encodeURIComponent(f.message.trim());
+      return url;
+    }
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram',
+    icon: '📷',
+    fields: [
+      { key: 'username', label: 'Usuario (sin @)', type: 'text', placeholder: 'usuario', required: true }
+    ],
+    build: f => "https://instagram.com/" + encodeURIComponent(String(f.username||'').trim().replace(/^@/, ''))
+  },
+  {
+    id: 'facebook',
+    label: 'Facebook',
+    icon: '👍',
+    fields: [
+      { key: 'username', label: 'Usuario o página', type: 'text', placeholder: 'usuario', required: true }
+    ],
+    build: f => "https://facebook.com/" + encodeURIComponent(String(f.username||'').trim().replace(/^@/, ''))
+  },
+  {
+    id: 'tiktok',
+    label: 'TikTok',
+    icon: '🎵',
+    fields: [
+      { key: 'username', label: 'Usuario (sin @)', type: 'text', placeholder: 'usuario', required: true }
+    ],
+    build: f => "https://tiktok.com/@" + encodeURIComponent(String(f.username||'').trim().replace(/^@/, ''))
+  },
+  {
+    id: 'twitter',
+    label: 'X / Twitter',
+    icon: '🐦',
+    fields: [
+      { key: 'username', label: 'Usuario (sin @)', type: 'text', placeholder: 'usuario', required: true }
+    ],
+    build: f => "https://x.com/" + encodeURIComponent(String(f.username||'').trim().replace(/^@/, ''))
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    icon: '▶️',
+    fields: [
+      { key: 'username', label: 'Canal (con @) o video ID', type: 'text', placeholder: '@canal o dQw4w9WgXcQ', required: true,
+        help: 'Si empieza con @ es canal. Si es un ID de 11 caracteres es video. También acepta URL completa.' }
+    ],
+    build: f => {
+      const u = String(f.username||'').trim();
+      if (/^https?:\/\//i.test(u)) return u;
+      if (u.startsWith('@')) return "https://youtube.com/" + encodeURIComponent(u);
+      if (u.length === 11) return "https://youtu.be/" + encodeURIComponent(u);
+      return "https://youtube.com/@" + encodeURIComponent(u);
+    }
+  },
+  {
+    id: 'linkedin',
+    label: 'LinkedIn',
+    icon: '💼',
+    fields: [
+      { key: 'username', label: 'Usuario o empresa', type: 'text', placeholder: 'usuario', required: true },
+      { key: 'type', label: 'Tipo', type: 'select', default: 'in',
+        options: [{value:'in', label:'Perfil (/in/)'},{value:'company', label:'Empresa (/company/)'}] }
+    ],
+    build: f => "https://linkedin.com/" + (f.type === 'company' ? 'company' : 'in') + "/" + encodeURIComponent(String(f.username||'').trim().replace(/^@/, ''))
+  },
+  {
+    id: 'email',
+    label: 'Email',
+    icon: '✉️',
+    fields: [
+      { key: 'to', label: 'Destinatario', type: 'email', placeholder: 'hola@ejemplo.com', required: true },
+      { key: 'subject', label: 'Asunto (opcional)', type: 'text', placeholder: 'Consulta' },
+      { key: 'body', label: 'Mensaje (opcional)', type: 'textarea' }
+    ],
+    build: f => {
+      const params = [];
+      if (f.subject && f.subject.trim()) params.push('subject=' + encodeURIComponent(f.subject.trim()));
+      if (f.body && f.body.trim()) params.push('body=' + encodeURIComponent(f.body.trim()));
+      return 'mailto:' + (f.to || '').trim() + (params.length ? '?' + params.join('&') : '');
+    }
+  },
+  {
+    id: 'phone',
+    label: 'Llamada',
+    icon: '📞',
+    fields: [
+      { key: 'phone', label: 'Teléfono', type: 'tel', placeholder: '+5491123456789', required: true }
+    ],
+    build: f => 'tel:' + String(f.phone||'').replace(/[^\d+]/g, '')
+  },
+  {
+    id: 'sms',
+    label: 'SMS',
+    icon: '📱',
+    fields: [
+      { key: 'phone', label: 'Teléfono', type: 'tel', placeholder: '+5491123456789', required: true },
+      { key: 'message', label: 'Mensaje pre-cargado (opcional)', type: 'textarea' }
+    ],
+    build: f => {
+      let url = 'sms:' + String(f.phone||'').replace(/[^\d+]/g, '');
+      if (f.message && f.message.trim()) url += '?body=' + encodeURIComponent(f.message.trim());
+      return url;
+    }
+  },
+  {
+    id: 'vcard',
+    label: 'Contacto vCard',
+    icon: '👤',
+    fields: [
+      { key: 'firstName', label: 'Nombre', type: 'text', placeholder: 'Juan', required: true },
+      { key: 'lastName', label: 'Apellido', type: 'text', placeholder: 'Pérez' },
+      { key: 'company', label: 'Empresa (opcional)', type: 'text' },
+      { key: 'phone', label: 'Teléfono (opcional)', type: 'tel' },
+      { key: 'email', label: 'Email (opcional)', type: 'email' },
+      { key: 'website', label: 'Sitio web (opcional)', type: 'text' },
+      { key: 'address', label: 'Dirección (opcional)', type: 'text' }
+    ],
+    build: f => {
+      const esc = v => String(v == null ? '' : v)
+        .replace(/\\/g, '\\\\')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;')
+        .replace(/\r?\n/g, '\\n');
+      const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+      const fn = [f.firstName, f.lastName].filter(Boolean).join(' ').trim() || 'Contacto';
+      lines.push(`N:${esc(f.lastName||'')};${esc(f.firstName||'')};;;`);
+      lines.push(`FN:${esc(fn)}`);
+      if (f.company) lines.push(`ORG:${esc(f.company)}`);
+      if (f.phone) lines.push(`TEL;TYPE=CELL:${esc(f.phone)}`);
+      if (f.email) lines.push(`EMAIL:${esc(f.email)}`);
+      if (f.website) lines.push(`URL:${esc(f.website)}`);
+      if (f.address) lines.push(`ADR:;;${esc(f.address)};;;;`);
+      lines.push('END:VCARD');
+      return 'data:text/vcard;charset=utf-8,' + encodeURIComponent(lines.join('\r\n'));
+    }
+  }
+];
+
+function getTemplate(id){
+  return QR_TEMPLATES.find(t => t.id === id) || QR_TEMPLATES[0];
+}
+
+function renderTemplateGrid(){
+  el('templateGrid').innerHTML = QR_TEMPLATES.map(t =>
+    '<button type="button" class="template-card' + (t.id === state.templateId ? ' active' : '') + '" data-template="' + t.id + '">' +
+      '<span class="tpl-icon">' + t.icon + '</span>' +
+      '<span>' + escapeHtml(t.label) + '</span>' +
+    '</button>'
+  ).join('');
+  el('templateGrid').querySelectorAll('.template-card').forEach(card => {
+    card.addEventListener('click', () => selectTemplate(card.dataset.template));
+  });
+}
+
+function renderTemplateFields(){
+  const tpl = getTemplate(state.templateId);
+  const container = el('templateFields');
+  if (!tpl.fields.length) {
+    container.innerHTML = '';
+    updateGeneratedUrlPreview();
+    return;
+  }
+  container.innerHTML = tpl.fields.map(f => {
+    const val = state.templateValues[f.key] != null ? state.templateValues[f.key] : (f.default || '');
+    let input;
+    if (f.type === 'textarea') {
+      input = '<textarea class="field-input" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder || '') + '" rows="2">' + escapeHtml(val) + '</textarea>';
+    } else if (f.type === 'select') {
+      input = '<select class="field-input" data-field="' + f.key + '">' +
+        (f.options||[]).map(o => '<option value="' + escapeHtml(o.value) + '"' + (val === o.value ? ' selected' : '') + '>' + escapeHtml(o.label) + '</option>').join('') +
+      '</select>';
+    } else {
+      input = '<input class="field-input" type="' + (f.type || 'text') + '" data-field="' + f.key + '" placeholder="' + escapeHtml(f.placeholder || '') + '" value="' + escapeHtml(val) + '">';
+    }
+    return '<div class="field">' +
+      '<label class="field-label">' + escapeHtml(f.label) + (f.required ? ' *' : '') + '</label>' +
+      input +
+      (f.help ? '<div class="field-help">' + escapeHtml(f.help) + '</div>' : '') +
+    '</div>';
+  }).join('');
+
+  container.querySelectorAll('[data-field]').forEach(input => {
+    const evt = input.tagName === 'SELECT' ? 'change' : 'input';
+    input.addEventListener(evt, () => {
+      state.templateValues[input.dataset.field] = input.value;
+      updateGeneratedUrlPreview();
+    });
+  });
+
+  updateGeneratedUrlPreview();
+}
+
+function updateGeneratedUrlPreview(){
+  const tpl = getTemplate(state.templateId);
+  let url = '';
+  try { url = tpl.build(state.templateValues) || ''; } catch (e) { url = ''; }
+  const preview = el('generatedUrlPreview');
+  if (url && url.length > 3) {
+    preview.textContent = url;
+    preview.classList.remove('empty');
+  } else {
+    preview.textContent = 'Completá los campos para ver la URL';
+    preview.classList.add('empty');
+  }
+}
+
+function selectTemplate(id){
+  if (state.templateId === id) return;
+  state.templateCache[state.templateId] = Object.assign({}, state.templateValues);
+  state.templateId = id;
+  state.templateValues = Object.assign({}, state.templateCache[id] || {});
+  renderTemplateGrid();
+  renderTemplateFields();
+}
+
+function detectAndParseTemplate(url){
+  url = String(url || '');
+  if (!url) return { id: 'custom', values: {} };
+
+  let m;
+  if ((m = url.match(/search\.google\.com\/local\/writereview\?placeid=([^&]+)/i)))
+    return { id: 'google_review', values: { placeId: decodeURIComponent(m[1]) } };
+  if ((m = url.match(/google\.com\/maps\/search\/\?api=1&query=([^&]+)/i)))
+    return { id: 'google_maps', values: { query: decodeURIComponent(m[1]) } };
+  if ((m = url.match(/wa\.me\/(\d+)(?:\?text=([^&]+))?/i)))
+    return { id: 'whatsapp', values: { phone: m[1], message: m[2] ? decodeURIComponent(m[2]) : '' } };
+  if ((m = url.match(/instagram\.com\/([^\/\?#]+)/i)))
+    return { id: 'instagram', values: { username: m[1] } };
+  if ((m = url.match(/facebook\.com\/([^\/\?#]+)/i)))
+    return { id: 'facebook', values: { username: m[1] } };
+  if ((m = url.match(/tiktok\.com\/@?([^\/\?#]+)/i)))
+    return { id: 'tiktok', values: { username: m[1] } };
+  if ((m = url.match(/(?:x|twitter)\.com\/([^\/\?#]+)/i)))
+    return { id: 'twitter', values: { username: m[1] } };
+  if ((m = url.match(/youtu\.be\/([^\/\?#]+)/i)))
+    return { id: 'youtube', values: { username: m[1] } };
+  if ((m = url.match(/youtube\.com\/(@[^\/\?#]+)/i)))
+    return { id: 'youtube', values: { username: m[1] } };
+  if ((m = url.match(/linkedin\.com\/(in|company)\/([^\/\?#]+)/i)))
+    return { id: 'linkedin', values: { type: m[1], username: m[2] } };
+  if (/^mailto:/i.test(url)) {
+    const mm = url.match(/^mailto:([^?]+)(?:\?(.*))?$/i);
+    if (mm) {
+      const p = new URLSearchParams(mm[2] || '');
+      return { id: 'email', values: { to: mm[1], subject: p.get('subject') || '', body: p.get('body') || '' } };
+    }
+  }
+  if (/^tel:/i.test(url)) {
+    return { id: 'phone', values: { phone: url.slice(4) } };
+  }
+  if (/^sms:/i.test(url)) {
+    const mm = url.match(/^sms:([^?]+)(?:\?(.*))?$/i);
+    if (mm) {
+      const p = new URLSearchParams(mm[2] || '');
+      return { id: 'sms', values: { phone: mm[1], message: p.get('body') || '' } };
+    }
+  }
+  if (/^data:text\/vcard/i.test(url)) {
+    const mm = url.match(/^data:text\/vcard[^,]*,(.+)$/is);
+    if (mm) {
+      try {
+        let vcard = decodeURIComponent(mm[1]);
+        const values = {};
+        const unesc = v => v ? v.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\') : v;
+        const n = vcard.match(/^N:([^;]*);([^;]*)/m);
+        if (n) { values.lastName = unesc(n[1]); values.firstName = unesc(n[2]); }
+        const org = vcard.match(/^ORG:([^\r\n]+)/m);
+        if (org) values.company = unesc(org[1]);
+        const tel = vcard.match(/^TEL[^:]*:([^\r\n]+)/m);
+        if (tel) values.phone = unesc(tel[1]);
+        const em = vcard.match(/^EMAIL[^:]*:([^\r\n]+)/m);
+        if (em) values.email = unesc(em[1]);
+        const w = vcard.match(/^URL:([^\r\n]+)/m);
+        if (w) values.website = unesc(w[1]);
+        const adr = vcard.match(/^ADR:[^:]*:([^\r\n]+)/m);
+        if (adr) values.address = unesc(adr[1].replace(/^;+/, '').replace(/;+$/, ''));
+        return { id: 'vcard', values };
+      } catch (e) {}
+    }
+  }
+  return { id: 'custom', values: { url } };
+}
+
+/* ============================================================
+   LOAD DATA
+   ============================================================ */
+async function loadDashboard(){
+  __diagAppend('Llamando a getDashboardData…');
+  try{
+    const data = await api('getDashboardData');
+    __diagAppend('getDashboardData OK — ' + (data.qrCodes ? data.qrCodes.length : 0) + ' QRs');
+    state.qrCodes = data.qrCodes || [];
+    state.stats = data.stats || {};
+    state.webAppUrl = data.webAppUrl || GAS_EXEC_URL;
+    state.loaded = true;
+    renderStats();
+    renderGrid();
+    el('navTotal').textContent = state.stats.total || 0;
+    const activeView = document.querySelector('.view.active');
+    if(activeView && activeView.dataset.view === 'archive') renderArchive();
+    __diagSet('Dashboard cargado OK — ' + state.qrCodes.length + ' QRs', 'ok');
+    setTimeout(() => {
+      const bar = document.getElementById('__diag');
+      if(bar && bar.style.color === 'rgb(22, 101, 52)'){
+        bar.style.transition = 'opacity .5s';
+        bar.style.opacity = '0';
+        setTimeout(() => { bar.style.display = 'none'; }, 500);
+      }
+    }, 3000);
+  }catch(err){
+    const msg = err && err.message ? err.message : String(err);
+    __diagSet('ERROR getDashboardData: ' + msg, 'error');
+    console.error('[loadDashboard] error:', err);
+    el('qrGrid').innerHTML =
+      '<div class="empty" style="grid-column:1/-1">' +
+        '<h3>No se pudo cargar el panel</h3>' +
+        '<p style="color:var(--color-ember);font-family:ui-monospace,monospace;font-size:12px">' + escapeHtml(msg) + '</p>' +
+        '<p style="margin-top:12px">Revisá que:<br>' +
+        '• <code>doPost(e)</code> esté agregado en <code>Codigo.gs</code>.<br>' +
+        '• Hayas actualizado la implementación del Web App (<strong>Nueva versión</strong>).<br>' +
+        '• El acceso esté configurado como <strong>Cualquier persona</strong>.</p>' +
+        '<button type="button" class="btn btn-primary" onclick="loadDashboard()">Reintentar</button>' +
+      '</div>';
+    toast('No se pudo cargar el panel: ' + msg, 'error');
+  }
+}
+
+function renderStats(){
+  const s = state.stats || {};
+  el('statTotal').textContent = s.total ?? 0;
+  el('statActive').textContent = s.active ?? 0;
+  el('statPaused').textContent = s.paused ?? 0;
+  el('statScans').textContent = (s.totalScans ?? 0).toLocaleString('es-AR');
+  el('stat7d').textContent = (s.scansLast7d ?? 0).toLocaleString('es-AR');
+  el('statTop').textContent = s.topName || '—';
+  el('statTopCount').textContent = (s.topScans ?? 0).toLocaleString('es-AR');
+  el('statLast').textContent = s.lastCreatedName || '—';
+  el('statLastAgo').textContent = timeAgo(state.qrCodes[0]?.created);
+}
+
+function getFiltered(){
+  let list = state.qrCodes.slice();
+  if(state.filter === 'active') list = list.filter(q => q.active);
+  if(state.filter === 'paused') list = list.filter(q => !q.active);
+  if(state.search){
+    const q = state.search.toLowerCase();
+    list = list.filter(item =>
+      (item.name || '').toLowerCase().includes(q) ||
+      (item.url || '').toLowerCase().includes(q) ||
+      (item.id || '').toLowerCase().includes(q)
+    );
+  }
+  if(state.sort === 'scans') list.sort((a,b) => b.scanCount - a.scanCount);
+  if(state.sort === 'name') list.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+  if(state.sort === 'created') list.sort((a,b) => new Date(b.created) - new Date(a.created));
+  return list;
+}
+
+function renderGrid(){
+  const list = getFiltered();
+  const grid = el('qrGrid');
+  if(state.qrCodes.length === 0){
+    grid.innerHTML =
+      '<div class="empty" style="grid-column:1/-1">' +
+        '<h3>Todavía no creaste ningún QR</h3>' +
+        '<p>Empezá creando tu primer QR dinámico. Cada uno tiene su propia hoja en el archivo.</p>' +
+        '<button class="btn btn-primary" onclick="openCreate()">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Crear primer QR' +
+        '</button>' +
+      '</div>';
+    return;
+  }
+  if(list.length === 0){
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><h3>Sin resultados</h3><p>No hay QR que coincidan con tu búsqueda.</p></div>';
+    return;
+  }
+  grid.innerHTML = list.map(q => cardHtml(q)).join('');
+}
+
+function cardHtml(q){
+  const statusBadge = q.active
+    ? '<span class="badge badge-success"><span class="badge-dot"></span>Activo</span>'
+    : '<span class="badge badge-warning"><span class="badge-dot"></span>Pausado</span>';
+  const noUrl = !q.redirectUrl || q.redirectUrl.indexOf('http') !== 0;
+  const img = noUrl
+    ? '<div class="qr-thumb-empty">Web App sin publicar</div>'
+    : '<img src="' + qrImageUrl(q.redirectUrl, 200) + '" alt="QR ' + escapeHtml(q.name) + '" loading="lazy">';
+  const testBtn = noUrl
+    ? ''
+    : '<button class="btn btn-ghost btn-sm" data-action="test" data-id="' + escapeHtml(q.id) + '" title="Abrir link de redirección en pestaña nueva">Probar</button>';
+  return '' +
+    '<article class="card" data-id="' + escapeHtml(q.id) + '">' +
+      '<div class="card-head">' +
+        '<div style="min-width:0">' +
+          '<h3 class="card-title">' + escapeHtml(q.name) + '</h3>' +
+          '<p class="card-sub">Creado ' + timeAgo(q.created) + '</p>' +
+        '</div>' +
+        statusBadge +
+      '</div>' +
+      '<div class="card-body">' +
+        '<div class="qr-thumb">' + img + '</div>' +
+        '<div class="card-stats">' +
+          '<div class="card-stat-row">' +
+            '<div class="card-stat-label">Escaneos</div>' +
+            '<div class="card-stat-value">' + (q.scanCount || 0).toLocaleString('es-AR') + '</div>' +
+          '</div>' +
+          '<div class="card-stat-row">' +
+            '<div class="card-stat-label">URL actual</div>' +
+            '<div class="card-url">' + escapeHtml(truncate(q.url || '', 60)) + '</div>' +
+          '</div>' +
+          (noUrl ? '' :
+          '<div class="card-stat-row">' +
+            '<div class="card-stat-label">Link del QR</div>' +
+            '<div class="card-url" style="color:var(--color-ink)">' + escapeHtml(truncate(q.redirectUrl || '', 50)) + '</div>' +
+          '</div>') +
+        '</div>' +
+      '</div>' +
+      '<div class="card-foot">' +
+        '<button class="btn btn-ghost btn-sm" data-action="detail" data-id="' + escapeHtml(q.id) + '">Detalle</button>' +
+        '<button class="btn btn-outline btn-sm" data-action="copy" data-id="' + escapeHtml(q.id) + '">Copiar</button>' +
+        testBtn +
+        '<button class="btn btn-icon btn-sm btn-danger" data-action="toggle" data-id="' + escapeHtml(q.id) + '" title="' + (q.active ? 'Pausar' : 'Activar') + '">' +
+          (q.active
+            ? '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9z"/></svg>') +
+        '</button>' +
+      '</div>' +
+    '</article>';
+}
+
+/* ============================================================
+   ACTIONS
+   ============================================================ */
+function openCreate(){
+  state.editingId = null;
+  state.templateId = 'custom';
+  state.templateValues = {};
+  state.templateCache = {};
+  el('formTitle').textContent = 'Nuevo QR';
+  el('fName').value = '';
+  el('fErr').style.display = 'none';
+  el('previewField').style.display = 'none';
+  renderTemplateGrid();
+  renderTemplateFields();
+  updatePreview();
+  showOverlay('formModal');
+  setTimeout(() => el('fName').focus(), 100);
+}
+
+async function openEdit(id){
+  const q = state.qrCodes.find(x => x.id === id);
+  if(!q) return;
+  state.editingId = id;
+  state.templateCache = {};
+
+  const detected = detectAndParseTemplate(q.url || '');
+  state.templateId = detected.id;
+  state.templateValues = detected.values || {};
+
+  el('formTitle').textContent = 'Editar QR';
+  el('fName').value = q.name || '';
+  el('fErr').style.display = 'none';
+  renderTemplateGrid();
+  renderTemplateFields();
+  updatePreview();
+  showOverlay('formModal');
+  setTimeout(() => el('fName').focus(), 100);
+}
+
+function updatePreview(){
+  const field = el('previewField');
+  const img = el('previewImg');
+  if(!state.editingId){
+    field.style.display = 'none';
+    return;
+  }
+  const q = state.qrCodes.find(x => x.id === state.editingId);
+  const redirectUrl = q && q.redirectUrl
+    ? q.redirectUrl
+    : (state.webAppUrl ? state.webAppUrl + '?id=' + state.editingId : '');
+  if(!redirectUrl){
+    field.style.display = 'none';
+    return;
+  }
+  field.style.display = 'block';
+  img.style.display = 'block';
+  img.src = qrImageUrl(redirectUrl, 240);
+}
+
+async function saveForm(){
+  const name = el('fName').value.trim();
+  const err = el('fErr');
+  err.style.display = 'none';
+
+  if(!name){ err.textContent = 'El nombre es obligatorio.'; err.style.display = 'block'; return; }
+
+  const tpl = getTemplate(state.templateId);
+
+  for (const f of tpl.fields) {
+    const val = String(state.templateValues[f.key] || '').trim();
+    if (f.required && !val) {
+      err.textContent = 'El campo "' + f.label + '" es obligatorio.';
+      err.style.display = 'block';
+      return;
+    }
+    if ((f.type === 'tel') && val) {
+      const digits = val.replace(/\D/g, '');
+      if (digits.length < 3) {
+        err.textContent = 'El teléfono "' + f.label + '" parece incompleto (mínimo 3 dígitos).';
+        err.style.display = 'block';
+        return;
+      }
+    }
+  }
+
+  let url;
+  try {
+    url = tpl.build(state.templateValues);
+  } catch (e) {
+    err.textContent = 'Error generando la URL: ' + e.message;
+    err.style.display = 'block';
+    return;
+  }
+  url = (url || '').trim();
+
+  if (!url) {
+    err.textContent = 'No se pudo generar la URL. Revisá los campos.';
+    err.style.display = 'block';
+    return;
+  }
+  if (!/^(https?:\/\/|mailto:|tel:|sms:|data:)/i.test(url)) {
+    err.textContent = "La URL generada no es válida. Debe empezar con http://, https://, mailto:, tel:, sms: o data:.";
+    err.style.display = 'block';
+    return;
+  }
+
+  const btn = el('formSave');
+  const original = btn.textContent;
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+
+  try{
+    let res;
+    if(state.editingId){
+      res = await api('updateQR', state.editingId, name, url);
+      toast('QR actualizado');
+    }else{
+      res = await api('createQR', name, url);
+      toast('QR creado');
+    }
+    if(res && res.sync && res.sync.ok === false){
+      setTimeout(() => toast('Sync Worker falló: ' + (res.sync.error || 'error'), 'error'), 400);
+    }
+    hideOverlay('formModal');
+    await loadDashboard();
+  }catch(e){
+    err.textContent = e.message;
+    err.style.display = 'block';
+    toast('Error al guardar', 'error');
+  }finally{
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+}
+
+async function toggleActive(id){
+  try{
+    const res = await api('toggleQRActive', id);
+    toast('Estado actualizado');
+    if(res && res.sync && res.sync.ok === false){
+      setTimeout(() => toast('Sync Worker falló: ' + (res.sync.error || 'error'), 'error'), 400);
+    }
+    await loadDashboard();
+  }catch(e){
+    toast(e.message, 'error');
+  }
+}
+
+async function copyLink(id){
+  const q = state.qrCodes.find(x => x.id === id);
+  if(!q) return;
+  const link = q.redirectUrl;
+  if(!link || link.indexOf('http') !== 0){
+    toast('Web App no publicado — configurá la URL en Configuración', 'error');
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(link);
+    toast('Link copiado: ' + link);
+  }catch(e){
+    const ta = document.createElement('textarea');
+    ta.value = link;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Link copiado');
+  }
+}
+
+async function testRedirect(id){
+  const q = state.qrCodes.find(x => x.id === id);
+  if(!q) return;
+  if(!q.redirectUrl || q.redirectUrl.indexOf('http') !== 0){
+    toast('Web App no publicado — configurá la URL en Configuración', 'error');
+    return;
+  }
+  window.open(q.redirectUrl, '_blank');
+  try{
+    const diag = await api('diagnoseRedirect', id);
+    if(diag && !diag.ok){
+      const reasons = (diag.steps || []).filter(s => String(s).indexOf('ERROR') >= 0).join(' · ') || 'ver detalle';
+      toast('Aviso del diagnóstico: ' + reasons, 'error');
+    }
+  }catch(e){
+    console.warn('[diagnoseRedirect]', e);
+  }
+}
+
+async function diagnoseQR(id){
+  try{
+    const diag = await api('diagnoseRedirect', id);
+    return diag;
+  }catch(e){
+    return { ok:false, steps:['Error: ' + e.message] };
+  }
+}
+
+async function openDetail(id){
+  state.detailId = id;
+  const q = state.qrCodes.find(x => x.id === id);
+  el('detailTitle').textContent = q ? q.name : 'Detalle';
+  showOverlay('detailModal');
+  el('detailBody').innerHTML = '<div class="loader"><div class="spinner"></div></div>';
+  try{
+    const detail = await api('getQRDetail', id);
+    renderDetail(detail);
+  }catch(e){
+    el('detailBody').innerHTML = '<div class="empty"><h3>Error</h3><p>' + escapeHtml(e.message) + '</p></div>';
+  }
+}
+
+function renderDetail(d){
+  const redirectUrl = d.redirectUrl || (state.webAppUrl ? state.webAppUrl + '?id=' + d.id : '');
+  const series = Array.isArray(d.series14d) ? d.series14d : [];
+  const scansArr = Array.isArray(d.scans) ? d.scans : [];
+  const maxBars = Math.max(...series.map(x => x.count || 0), 1);
+  const bars = series.length
+    ? series.map(x => {
+        const h = Math.max(Math.round(((x.count || 0) / maxBars) * 100), 2);
+        return '<div class="chart-bar" style="height:' + h + '%" data-count="' + (x.count || 0) + ' escaneos · ' + String(x.date || '').slice(5) + '"></div>';
+      }).join('')
+    : '<div style="width:100%;text-align:center;color:var(--color-mid-gray);font-size:12px;align-self:center">Sin datos</div>';
+
+  const scans = scansArr.length === 0
+    ? '<div style="padding:var(--spacing-20);text-align:center;color:var(--color-mid-gray);font-size:var(--text-body)">Todavía no se escaneó este QR.</div>'
+    : scansArr.map(s =>
+        '<div class="scan-row">' +
+          '<span class="scan-time">' + formatDateTime(s.timestamp) + '</span>' +
+          '<span class="scan-ua">' + escapeHtml(truncate(s.userAgent || '—', 60)) + '</span>' +
+        '</div>'
+      ).join('');
+
+  el('detailBody').innerHTML =
+    '<div class="detail-grid">' +
+      '<div>' +
+        '<div class="detail-qr">' +
+          (redirectUrl
+            ? '<img src="' + qrImageUrl(redirectUrl, 300) + '" alt="QR">'
+            : '<div style="padding:var(--spacing-20);color:var(--color-mid-gray);font-size:var(--text-caption)">Web App no publicado.<br>Configurá la URL en la sección Configuración.</div>') +
+          '<div class="detail-qr-meta">' +
+            (redirectUrl ? escapeHtml(redirectUrl) : 'Sin URL de redirect todavía') +
+          '</div>' +
+        '</div>' +
+        (redirectUrl
+          ? '<div class="detail-qr-actions">' +
+              '<button class="btn btn-primary btn-sm" data-detail-action="test" data-id="' + escapeHtml(d.id) + '">Probar redirect</button>' +
+              '<button class="btn btn-outline btn-sm" data-detail-action="copy" data-id="' + escapeHtml(d.id) + '">Copiar link del QR</button>' +
+              '<button class="btn btn-ghost btn-sm" data-detail-action="download" data-id="' + escapeHtml(d.id) + '">Descargar imagen QR</button>' +
+            '</div>'
+          : '') +
+      '</div>' +
+      '<div>' +
+        '<div class="detail-stats">' +
+          '<div class="detail-stat"><div class="detail-stat-label">Escaneos</div><div class="detail-stat-value">' + (d.scanCount || 0).toLocaleString('es-AR') + '</div></div>' +
+          '<div class="detail-stat"><div class="detail-stat-label">Creado</div><div class="detail-stat-value">' + formatDate(d.created) + '</div></div>' +
+          '<div class="detail-stat"><div class="detail-stat-label">Último escaneo</div><div class="detail-stat-value">' + (scansArr[0] ? timeAgo(scansArr[0].timestamp) : '—') + '</div></div>' +
+        '</div>' +
+        '<div style="margin-bottom:var(--spacing-16);padding:var(--spacing-12);background:var(--color-surface-alt);border:1px solid var(--color-hairline);border-radius:var(--radius-nested)">' +
+          '<div class="field-label" style="margin-bottom:6px">URL destino (a donde redirige el QR)</div>' +
+          '<div style="font-size:var(--text-body);word-break:break-all;color:var(--color-ink)">' + escapeHtml(d.url || '') + '</div>' +
+        '</div>' +
+        '<div class="chart">' +
+          '<p class="chart-title">Últimos 14 días</p>' +
+          '<div class="chart-bars">' + bars + '</div>' +
+          '<div class="chart-x"><span>hace 14d</span><span>hoy</span></div>' +
+        '</div>' +
+        '<div>' +
+          '<p class="chart-title" style="margin-bottom:8px">Escaneos recientes</p>' +
+          '<div class="scan-list">' + scans + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+async function clearScans(){
+  if(!state.detailId) return;
+  if(!confirm('¿Vaciar todos los escaneos de este QR? Esta acción no se puede deshacer.')) return;
+  try{
+    await api('clearScans', state.detailId);
+    toast('Escaneos vaciados');
+    openDetail(state.detailId);
+    await loadDashboard();
+  }catch(e){
+    toast(e.message, 'error');
+  }
+}
+
+async function deleteCurrentQR(){
+  if(!state.detailId) return;
+  const q = state.qrCodes.find(x => x.id === state.detailId);
+  const name = q ? q.name : '';
+  if(!confirm('¿Eliminar el QR "' + name + '"?\n\nSe va a borrar la hoja QR_' + state.detailId + ' y todos sus escaneos. Esta acción no se puede deshacer.')) return;
+  try{
+    await api('deleteQR', state.detailId);
+    toast('QR eliminado');
+    hideOverlay('detailModal');
+    state.detailId = null;
+    await loadDashboard();
+  }catch(e){
+    toast(e.message, 'error');
+  }
+}
+
+async function exportCurrentCSV(){
+  if(!state.detailId) return;
+  try{
+    const csv = await api('exportScansCSV', state.detailId);
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'escaneos-' + state.detailId + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('CSV descargado');
+  }catch(e){
+    toast(e.message, 'error');
+  }
+}
+
+async function downloadQR(url, name){
+  const safeName = String(name || 'qr').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  const imgUrl = qrImageUrl(url, 600);
+  try{
+    const resp = await fetch(imgUrl);
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const blob = await resp.blob();
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = 'qr-' + safeName + '.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+    toast('QR descargado');
+  }catch(e){
+    const a = document.createElement('a');
+    a.href = imgUrl;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast('No se pudo descargar directo — abrí la imagen y guardala', 'error');
+  }
+}
+
+/* ============================================================
+   MODAL HELPERS
+   ============================================================ */
+function showOverlay(id){ el(id).classList.add('show'); }
+function hideOverlay(id){ el(id).classList.remove('show'); }
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+el('btnNew').addEventListener('click', openCreate);
+el('formSave').addEventListener('click', saveForm);
+
+el('search').addEventListener('input', (e) => {
+  state.search = e.target.value;
+  renderGrid();
+});
+
+document.querySelectorAll('#filterGroup .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('#filterGroup .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    state.filter = c.dataset.filter;
+    renderGrid();
+  });
+});
+
+document.querySelectorAll('#sortGroup .chip').forEach(c => {
+  c.addEventListener('click', () => {
+    document.querySelectorAll('#sortGroup .chip').forEach(x => x.classList.remove('active'));
+    c.classList.add('active');
+    state.sort = c.dataset.sort;
+    renderGrid();
+  });
+});
+
+el('qrGrid').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  if(action === 'detail') openDetail(id);
+  if(action === 'copy') copyLink(id);
+  if(action === 'toggle') toggleActive(id);
+  if(action === 'test') testRedirect(id);
+});
+
+el('detailEdit').addEventListener('click', () => {
+  if(!state.detailId) return;
+  const id = state.detailId;
+  hideOverlay('detailModal');
+  setTimeout(() => openEdit(id), 200);
+});
+
+el('detailClear').addEventListener('click', clearScans);
+el('detailDelete').addEventListener('click', deleteCurrentQR);
+el('detailExport').addEventListener('click', exportCurrentCSV);
+
+el('detailBody').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-detail-action]');
+  if(!btn) return;
+  const action = btn.dataset.detailAction;
+  const id = btn.dataset.id;
+  if(!id) return;
+  if(action === 'test') testRedirect(id);
+  else if(action === 'copy') copyLink(id);
+  else if(action === 'download'){
+    const q = state.qrCodes.find(x => x.id === id);
+    const redirectUrl = q ? q.redirectUrl : (state.webAppUrl ? state.webAppUrl + '?id=' + id : '');
+    if(redirectUrl) downloadQR(redirectUrl, q ? q.name : 'qr');
+    else toast('Web App no publicado', 'error');
+  }
+});
+
+document.querySelectorAll('[data-close]').forEach(b => {
+  b.addEventListener('click', () => {
+    b.closest('.overlay').classList.remove('show');
+  });
+});
+
+document.querySelectorAll('.overlay').forEach(o => {
+  o.addEventListener('click', (e) => {
+    if(e.target === o) o.classList.remove('show');
+  });
+});
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
+  }
+  if((e.metaKey || e.ctrlKey) && e.key === 'k'){
+    e.preventDefault();
+    el('search').focus();
+  }
+  if((e.metaKey || e.ctrlKey) && e.key === 'n' && !e.shiftKey){
+    if(document.activeElement.tagName !== 'INPUT'){
+      e.preventDefault();
+      openCreate();
+    }
+  }
+});
+
+['fName'].forEach(id => {
+  el(id).addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); saveForm(); }
+  });
+});
+
+/* ============================================================
+   SIDEBAR NAV — SWITCH VIEWS
+   ============================================================ */
+const VIEWS = ['dashboard', 'stats', 'archive', 'settings'];
+const VIEW_LABELS = {
+  dashboard: 'Todos los QR',
+  stats: 'Estadísticas',
+  archive: 'Archivo',
+  settings: 'Configuración'
+};
+
+function switchView(name){
+  if(!VIEWS.includes(name)) return;
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.toggle('active', v.dataset.view === name);
+  });
+  document.querySelectorAll('.nav-item[data-nav]').forEach(n => {
+    n.classList.toggle('active', n.dataset.nav === name);
+  });
+  document.querySelectorAll('.mnav-item[data-nav]').forEach(n => {
+    n.classList.toggle('active', n.dataset.nav === name);
+  });
+  const bc = document.querySelector('.breadcrumb .current');
+  if(bc) bc.textContent = VIEW_LABELS[name] || name;
+  try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); }
+  catch (e) { window.scrollTo(0, 0); }
+  if(name === 'stats')    loadStatsView();
+  if(name === 'archive')  renderArchive();
+  if(name === 'settings') loadSettings();
+}
+
+document.querySelectorAll('.nav-item[data-nav]').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.nav));
+});
+document.querySelectorAll('.mnav-item[data-nav]').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.nav));
+});
+
+/* ============================================================
+   VISTA: ESTADÍSTICAS
+   ============================================================ */
+async function loadStatsView(){
+  const btn = el('statsRefresh');
+  const original = btn ? btn.innerHTML : '';
+  if(btn){
+    btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-top-color:currentColor"></div>';
+    btn.disabled = true;
+  }
+  try{
+    const data = await api('getStatsView');
+    state.statsView = data || {};
+    renderStatsView(state.statsView);
+  }catch(e){
+    console.error('[loadStatsView]', e);
+    const msg = escapeHtml(e && e.message ? e.message : 'Error desconocido');
+    el('globalChart').innerHTML =
+      '<div style="width:100%;text-align:center;align-self:center;color:var(--color-mid-gray);font-size:12px;padding:24px 0">' +
+        'No se pudieron cargar los datos.<br><span style="color:var(--color-ember)">' + msg + '</span>' +
+      '</div>';
+    el('rankingList').innerHTML =
+      '<div class="empty" style="padding:var(--spacing-20)"><p style="margin:0;color:var(--color-mid-gray)">Error al cargar ranking.</p></div>';
+    el('recentList').innerHTML =
+      '<div class="empty" style="padding:var(--spacing-20)"><p style="margin:0;color:var(--color-mid-gray)">Error al cargar escaneos recientes.</p></div>';
+    toast('Error cargando estadísticas: ' + msg, 'error');
+  }finally{
+    if(btn){ btn.innerHTML = original; btn.disabled = false; }
+  }
+}
+
+function renderStatsView(d){
+  d = d || {};
+  const t       = d.totals || {};
+  const series  = Array.isArray(d.series14d) ? d.series14d : [];
+  const ranking = Array.isArray(d.ranking) ? d.ranking : [];
+  const recent  = Array.isArray(d.recentScans) ? d.recentScans : [];
+
+  el('gTotal').textContent    = (t.totalScans   || 0).toLocaleString('es-AR');
+  el('g30d').textContent      = (t.scansLast30d || 0).toLocaleString('es-AR');
+  el('g7d').textContent       = (t.scansLast7d  || 0).toLocaleString('es-AR');
+  el('g7dAvg').textContent    = (t.avgPerQR     || 0).toLocaleString('es-AR');
+  el('gTop').textContent      = t.topName || '—';
+  el('gTopCount').textContent = (t.topScans     || 0).toLocaleString('es-AR');
+  el('gAvg').textContent      = (t.avgPerQR     || 0).toLocaleString('es-AR');
+  el('gCount').textContent    = t.qrCount || 0;
+
+  if(series.length){
+    const maxBars = Math.max(...series.map(x => x.count || 0), 1);
+    el('globalChart').innerHTML = series.map(x => {
+      const h = Math.max(Math.round(((x.count || 0) / maxBars) * 100), 2);
+      return '<div class="chart-bar" style="height:' + h + '%" data-count="' + (x.count || 0) + ' escaneos · ' + String(x.date || '').slice(5) + '"></div>';
+    }).join('');
+    el('chartStart').textContent = String(series[0].date || '').slice(5) || '—';
+    el('chartEnd').textContent = 'hoy';
+  }else{
+    el('globalChart').innerHTML = '<div style="width:100%;text-align:center;color:var(--color-mid-gray);font-size:12px;align-self:center">Sin datos</div>';
+    el('chartStart').textContent = '—';
+    el('chartEnd').textContent = 'hoy';
+  }
+
+  if(!ranking.length){
+    el('rankingList').innerHTML = '<div class="empty" style="padding:var(--spacing-24)"><p>Todavía no hay QR creados.</p></div>';
+  }else{
+    el('rankingList').innerHTML = ranking.slice(0, 10).map((q, i) => {
+      const cls = i === 0 ? 'rank-row top1' : 'rank-row';
+      return '<div class="' + cls + '">' +
+        '<div class="rank-pos">' + (i + 1) + '</div>' +
+        '<div class="rank-name">' + escapeHtml(q.name || '—') + '</div>' +
+        '<div class="rank-count">' + (q.scanCount || 0).toLocaleString('es-AR') +
+          '<small>' + (q.last7 || 0) + ' en 7d</small></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  if(!recent.length){
+    el('recentList').innerHTML = '<div class="empty" style="padding:var(--spacing-24)"><p>Todavía no hay escaneos registrados.</p></div>';
+  }else{
+    el('recentList').innerHTML = recent.map(s =>
+      '<div class="recent-row">' +
+        '<div class="recent-time">' + formatDateTime(s.timestamp) + '</div>' +
+        '<div class="recent-name">' + escapeHtml(s.qrName || '—') + '</div>' +
+        '<div class="recent-ago">hace ' + timeAgo(s.timestamp) + '</div>' +
+      '</div>'
+    ).join('');
+  }
+}
+
+el('statsRefresh').addEventListener('click', loadStatsView);
+
+/* ============================================================
+   VISTA: ARCHIVO (QRs pausados)
+   ============================================================ */
+function renderArchive(){
+  const grid = el('archiveGrid');
+  if(!state.loaded){
+    grid.innerHTML = '<div class="loader" style="grid-column:1/-1"><div class="spinner"></div></div>';
+    return;
+  }
+  const paused = state.qrCodes.filter(q => !q.active);
+  if(paused.length === 0){
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">' +
+      '<h3>Sin QR pausados</h3>' +
+      '<p>Cuando pauses un QR desde el dashboard, va a aparecer acá. ' +
+      'Los QR pausados conservan su historial de escaneos pero no redirigen.</p></div>';
+    return;
+  }
+  grid.innerHTML = paused.map(q => cardHtml(q)).join('');
+}
+
+el('archiveGrid')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  if(action === 'detail') openDetail(id);
+  if(action === 'copy') copyLink(id);
+  if(action === 'toggle') toggleActive(id);
+  if(action === 'test') testRedirect(id);
+});
+
+/* ============================================================
+   VISTA: CONFIGURACIÓN
+   ============================================================ */
+async function loadSettings(){
+  try{
+    const info = await api('getSystemInfo');
+    state.systemInfo = info;
+    const qrUrl = info.qrBaseUrl || '';
+    const hasQrUrl = !!qrUrl && qrUrl.indexOf('http') === 0;
+    el('cfgQrBaseUrl').textContent = qrUrl || 'Sin configurar — los QR apuntan directo a Apps Script (con aviso de Google).';
+    el('cfgQrBaseUrl').style.color = hasQrUrl ? 'var(--color-ink)' : 'var(--color-ember)';
+    el('cfgQrBaseUrlInput').value = qrUrl || '';
+
+    const proxyStatus = el('cfgProxyStatus');
+    if(info.usingProxy){
+      proxyStatus.style.display = 'block';
+      proxyStatus.style.background = '#f0fdf4';
+      proxyStatus.style.color = '#166534';
+      proxyStatus.style.border = '1px solid #bbf7d0';
+      proxyStatus.innerHTML = '✓ Proxy activo — los QR apuntan a <strong>' + escapeHtml(qrUrl) + '</strong>. El aviso de Google no debería aparecer.';
+    }else if(hasQrUrl){
+      proxyStatus.style.display = 'block';
+      proxyStatus.style.background = '#fffbeb';
+      proxyStatus.style.color = '#92400e';
+      proxyStatus.style.border = '1px solid #fde68a';
+      proxyStatus.innerHTML = '⚠ URL pública del QR = URL del Web App. Configurá una URL de Worker para evitar el aviso.';
+    }else{
+      proxyStatus.style.display = 'none';
+    }
+
+    const webAppUrl = info.webAppUrl || GAS_EXEC_URL;
+    const hasUrl = !!webAppUrl && webAppUrl.indexOf('http') === 0;
+    el('cfgWebAppUrl').textContent = webAppUrl;
+    el('cfgWebAppUrl').style.color = hasUrl ? 'var(--color-ink)' : 'var(--color-ember)';
+
+    el('cfgWorkerUrl').value = info.workerUrl || '';
+    el('cfgWorkerToken').value = '';
+    el('cfgWorkerToken').placeholder = info.workerConfigured
+      ? '•••••• (token guardado — escribí uno nuevo para reemplazarlo)'
+      : 'tu-token-secreto-aleatorio';
+    const workerStatus = el('cfgWorkerStatus');
+    if(info.workerConfigured){
+      const lastSync = info.lastSync ? timeAgo(info.lastSync) : 'nunca';
+      workerStatus.style.background = '#f0fdf4';
+      workerStatus.style.color = '#166534';
+      workerStatus.style.border = '1px solid #bbf7d0';
+      workerStatus.innerHTML = '✓ Worker configurado — última sync: hace <strong>' + lastSync + '</strong>.<br>URL: ' + escapeHtml(info.workerUrl);
+    }else{
+      workerStatus.style.background = '#fffbeb';
+      workerStatus.style.color = '#92400e';
+      workerStatus.style.border = '1px solid #fde68a';
+      workerStatus.innerHTML = '⚠ Worker sin configurar. Sin KV, los redirects pueden fallar en iPhone/Safari.';
+    }
+
+    el('cfgSsName').textContent = info.spreadsheetName || '—';
+    el('cfgSheetCount').textContent = info.sheetCount || 0;
+    el('cfgTotalQR').textContent = info.totalQRs || 0;
+    el('cfgTotalScans').textContent = (info.totalScans || 0).toLocaleString('es-AR');
+    el('cfgVersion').textContent = info.version || '1.0';
+  }catch(e){
+    toast('Error cargando configuración', 'error');
+  }
+}
+
+el('copyWebAppUrl').addEventListener('click', async () => {
+  const url = state.systemInfo?.webAppUrl || GAS_EXEC_URL;
+  if(!url){ toast('Web App no publicado', 'error'); return; }
+  try{
+    await navigator.clipboard.writeText(url);
+    toast('URL copiada');
+  }catch(e){
+    toast('No se pudo copiar', 'error');
+  }
+});
+
+el('openWebApp').addEventListener('click', () => {
+  const url = state.systemInfo?.webAppUrl || GAS_EXEC_URL;
+  if(url) window.open(url, '_blank');
+  else toast('Web App no publicado', 'error');
+});
+
+el('testLookup').addEventListener('click', () => {
+  const url = state.systemInfo?.webAppUrl || GAS_EXEC_URL;
+  if(!url){ toast('Web App no publicado', 'error'); return; }
+  const firstQr = state.qrCodes[0];
+  if(!firstQr){ toast('Creá un QR primero', 'error'); return; }
+  const lookupUrl = url + '?action=lookup&id=' + firstQr.id;
+  window.open(lookupUrl, '_blank');
+  toast('Abriendo: ' + lookupUrl);
+});
+
+el('saveQrBaseUrl').addEventListener('click', async () => {
+  const url = el('cfgQrBaseUrlInput').value.trim();
+  if(!url){
+    try{
+      await api('setQrBaseUrl', '');
+      toast('URL pública borrada — QRs apuntan al Web App (con aviso)');
+      await loadSettings();
+      await loadDashboard();
+    }catch(e){ toast(e.message, 'error'); }
+    return;
+  }
+  if(!/^https?:\/\/[^\s]+$/i.test(url)){
+    toast("URL inválida — debe comenzar con http:// o https://", 'error');
+    return;
+  }
+  try{
+    const res = await api('setQrBaseUrl', url);
+    toast('URL pública guardada — los QR nuevos van a apuntar acá');
+    state.webAppUrl = res.qrBaseUrl;
+    await loadSettings();
+    await loadDashboard();
+  }catch(e){
+    toast(e.message, 'error');
+  }
+});
+
+el('saveWorkerConfig').addEventListener('click', async () => {
+  const url = el('cfgWorkerUrl').value.trim();
+  const tokenInput = el('cfgWorkerToken').value;
+  const token = tokenInput.trim();
+  if(!url && !token){
+    toast('Completá la URL del Worker y/o el token', 'error');
+    return;
+  }
+  if(!url){
+    toast('La URL del Worker es obligatoria', 'error');
+    return;
+  }
+  try{
+    await api('setWorkerConfig', url, token ? token : null);
+    toast('Config del Worker guardada');
+    el('cfgWorkerToken').value = '';
+    await loadSettings();
+  }catch(e){
+    toast(e.message, 'error');
+  }
+});
+
+el('testWorkerBtn').addEventListener('click', async () => {
+  const btn = el('testWorkerBtn');
+  const original = btn.textContent;
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+  try{
+    const res = await api('testWorkerConnection');
+    if(res.ok){
+      const b = res.body || {};
+      toast('✓ Worker OK — KV: ' + (b.kv || 'desconocido'));
+    }else{
+      toast('Worker falló: ' + (res.error || 'HTTP ' + res.status), 'error');
+    }
+  }catch(e){
+    toast(e.message, 'error');
+  }finally{
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+});
+
+el('syncNowBtn').addEventListener('click', async () => {
+  const btn = el('syncNowBtn');
+  const original = btn.textContent;
+  btn.innerHTML = '<div class="spinner"></div>';
+  btn.disabled = true;
+  try{
+    const res = await api('syncToWorker');
+    if(res.ok){
+      toast('✓ Sync OK — ' + res.written + ' QRs subidos al KV');
+      await loadSettings();
+    }else{
+      toast('Sync falló: ' + (res.error || 'error desconocido'), 'error');
+    }
+  }catch(e){
+    toast(e.message, 'error');
+  }finally{
+    btn.innerHTML = original;
+    btn.disabled = false;
+  }
+});
+
+el('openSpreadsheet').addEventListener('click', () => {
+  const url = state.systemInfo?.spreadsheetUrl;
+  if(url) window.open(url, '_blank');
+});
+
+el('runSetup').addEventListener('click', async () => {
+  try{
+    await api('setup');
+    toast('Sistema verificado');
+    await loadDashboard();
+  }catch(e){
+    toast(e.message, 'error');
+  }
+});
+
+el('refreshAll').addEventListener('click', async () => {
+  await loadDashboard();
+  const active = document.querySelector('.view.active');
+  if(active?.dataset.view === 'stats') await loadStatsView();
+  if(active?.dataset.view === 'settings') await loadSettings();
+  toast('Datos actualizados');
+});
+
+/* ============================================================
+   INIT — compatible con Vercel/GitHub y Google Apps Script
+   ============================================================ */
+function init(){
+  const isGasNative = (typeof google !== 'undefined' && google.script && google.script.run);
+  if (isGasNative) {
+    __diagAppend('Entorno Apps Script nativo — cargando dashboard…');
+  } else {
+    __diagAppend('Conectando a Apps Script (' + GAS_DEPLOYMENT_ID.slice(0, 12) + '…)');
+  }
+  loadDashboard();
+}
+
+try {
+  __diagAppend('Script parseado OK — esperando DOM…');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+} catch (e) {
+  __diagSet('ERROR FATAL init: ' + e.message, 'error');
+  console.error('[INIT] error fatal:', e);
+  toast('Error al iniciar: ' + e.message, 'error');
+}
+</script>
+
+</body>
+</html>
